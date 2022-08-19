@@ -33,3 +33,5 @@
 .vs
 __vm
 Debug
+obj
+bin

@@ -38,7 +38,7 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 
 }
 
-void SignalRClientClass::Setup()
+void SignalRClientClass::Setup(String address, int port, String path, String username, String password)
 {
 	// server address, port and URL
 	webSocket.begin("192.168.0.123", 81, "/");
@@ -51,4 +51,24 @@ void SignalRClientClass::Setup()
 
 	// try ever 5000 again if connection has failed
 	webSocket.setReconnectInterval(5000);
+}
+
+void SignalRClientClass::UseMessagePack()
+{
+
+}
+
+void SignalRClientClass::On(char* fctName, SignalRClientOnEvent cbEvent)
+{
+
+}
+
+void SignalRClientClass::Connect()
+{
+
+}
+
+void SignalRClientClass::Invoke(char* fctName, const ArduinoJson::DynamicJsonDocument& doc)
+{
+
 }

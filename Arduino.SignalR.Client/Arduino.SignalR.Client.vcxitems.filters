@@ -26,9 +26,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSocketsClient.cpp">
       <Filter>WebSockets</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\AsyncTCP\AsyncTCP.cpp">
-      <Filter>WebSockets</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\libb64\cdecode.c">
       <Filter>WebSockets</Filter>
     </ClCompile>
@@ -56,14 +53,14 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSocketsVersion.h">
       <Filter>WebSockets</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\AsyncTCP\AsyncTCP.h">
-      <Filter>WebSockets</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\libb64\cencode_inc.h">
       <Filter>WebSockets</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\libb64\cdecode_inc.h">
       <Filter>WebSockets</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\ArduinoJson.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
