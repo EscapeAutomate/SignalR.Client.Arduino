@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{8eeff112-e11e-4151-8767-4dfb92cb9cb5}</ItemsProjectGuid>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)readme.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)library.properties" />
+    <Text Include="$(MSBuildThisFileDirectory)src\Arduino.SignalR.Client.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- <ClInclude Include="$(MSBuildThisFileDirectory)Arduino.SignalR.Client.h" /> -->
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\AsyncTCP\AsyncTCP.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\libb64\cdecode_inc.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\libb64\cencode_inc.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\SocketIOclient.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSockets.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSocketsClient.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSocketsVersion.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\Arduino.SignalR.Client.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\AsyncTCP\AsyncTCP.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\libb64\cdecode.c" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\libb64\cencode.c" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\SocketIOclient.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSockets.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSocketsClient.cpp" />
+  </ItemGroup>
+</Project>
