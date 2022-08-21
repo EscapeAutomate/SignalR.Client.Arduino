@@ -9,31 +9,25 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx</Extensions>
     </Filter>
-    <Filter Include="WebSockets">
-      <UniqueIdentifier>{18457259-145a-4c46-bee5-29938f1f21d1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Models">
-      <UniqueIdentifier>{129f8f5d-5464-4b4d-93eb-546d2ca09135}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)src\Arduino.SignalR.Client.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\SocketIOclient.cpp">
-      <Filter>WebSockets</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSockets.cpp">
-      <Filter>WebSockets</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSocketsClient.cpp">
-      <Filter>WebSockets</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\libb64\cdecode.c">
-      <Filter>WebSockets</Filter>
+      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\libb64\cencode.c">
-      <Filter>WebSockets</Filter>
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\SocketIOclient.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSockets.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSocketsClient.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -44,29 +38,29 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\SocketIOclient.h">
-      <Filter>WebSockets</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSockets.h">
-      <Filter>WebSockets</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSocketsClient.h">
-      <Filter>WebSockets</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSocketsVersion.h">
-      <Filter>WebSockets</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\libb64\cdecode_inc.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\libb64\cencode_inc.h">
-      <Filter>WebSockets</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\libb64\cdecode_inc.h">
-      <Filter>WebSockets</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\SocketIOclient.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSockets.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSocketsClient.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\WebSocketsVersion.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)src\ArduinoJson.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)src\Models\Messages.h">
-      <Filter>Models</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

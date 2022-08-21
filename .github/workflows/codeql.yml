@@ -46,25 +46,13 @@ jobs:
       with:
         languages: ${{ matrix.language }}
         
-#    - name: Compile arduino
-#      uses: ArminJo/arduino-test-compile@v3
-#      with: 
-#        arduino-board-fqbn: esp32:esp32:esp32:FlashFreq=80
-#        platform-url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-#        sketch-names: Arduino.SignalR.Client.Example.ino
-#        debug-compile: true
-
-    - name: Install arduino-cli
-      run: brew update && brew install arduino-cli
-
-    - name: Update index and install the required board platform
-      run: arduino-cli core update-index --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-      
-    - name: Install arduino-cli
-      run: arduino-cli core install esp32:esp32 --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-
-    - name: Compiling sketches
-      run: arduino-cli compile --verbose --warnings all --fqbn esp32:esp32:esp32:FlashFreq=80 --library . ./Arduino.SignalR.Client.Example/Arduino.SignalR.Client.Example.ino
+    - name: Compile arduino
+      uses: ArminJo/arduino-test-compile@v3
+      with: 
+        arduino-board-fqbn: esp32:esp32:esp32:FlashFreq=80
+        platform-url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+        sketch-names: Arduino.SignalR.Client.Example.ino
+        debug-compile: true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
