@@ -64,7 +64,7 @@ jobs:
       run: arduino-cli core install esp32:esp32 --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 
     - name: Compiling sketches
-      run: arduino-cli compile --verbose --warnings all --fqbn esp32:esp32:esp32:FlashFreq=80 --library ./Arduino.SignalR.Client ./Arduino.SignalR.Client.Example/Arduino.SignalR.Client.Example.ino
+      run: arduino-cli compile --verbose --warnings all --fqbn esp32:esp32:esp32:FlashFreq=80 --library . ./Arduino.SignalR.Client.Example/Arduino.SignalR.Client.Example.ino
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
