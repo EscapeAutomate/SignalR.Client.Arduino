@@ -17,7 +17,7 @@ public:
 class HandshakeRequestMessage : public BaseMessage
 {
 public:
-	char* protocol;
+	const char* protocol;
 	int version;
 
 	String Serialize()

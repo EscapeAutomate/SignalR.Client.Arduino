@@ -29,6 +29,8 @@ void SignalRClientClass::WebSocketEvent(WStype_t type, uint8_t* payload, size_t 
 		}
 
 		break;
+	case WStype_PING:
+	case WStype_PONG:
 	case WStype_ERROR:
 	case WStype_FRAGMENT_TEXT_START:
 	case WStype_FRAGMENT_BIN_START:
