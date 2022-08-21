@@ -5,11 +5,9 @@ void setup() {
 	Serial.begin(115200);
 
 	SignalRClient.Setup("192.168.1.1", 5000, "/TestHub", "user", "password");
-	SignalRClient.UseMessagePack();
+	SignalRClient.UseMessagepack();
 
 	SignalRClient.On("ReceivedMessage", ReceivedMessage);
-
-	SignalRClient.Connect();
 
 	ArduinoJson::DynamicJsonDocument doc(200);
 
@@ -18,7 +16,7 @@ void setup() {
 
 // the loop function runs over and over again until power down or reset
 void loop() {
-  
+	SignalRClient.Loop();
 }
 
 void ReceivedMessage(ArduinoJson::DynamicJsonDocument* doc)

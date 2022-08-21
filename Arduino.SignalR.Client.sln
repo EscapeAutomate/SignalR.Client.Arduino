@@ -7,7 +7,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Arduino.SignalR.Client.Exam
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Arduino.SignalR.Client", "Arduino.SignalR.Client\Arduino.SignalR.Client.vcxitems", "{8EEFF112-E11E-4151-8767-4DFB92CB9CB5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Arduino.SignalR.Client.DemoServer", "Arduino.SignalR.Client.DemoServer\Arduino.SignalR.Client.DemoServer.csproj", "{9B7DDE55-B04D-4A7C-9339-5DAE947401B6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Arduino.SignalR.Client.DemoServer", "Arduino.SignalR.Client.DemoServer\Arduino.SignalR.Client.DemoServer.csproj", "{9B7DDE55-B04D-4A7C-9339-5DAE947401B6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{F0E0DBC3-F82C-4E88-8D4A-DD7B6EB60442}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\codeql.yml = .github\workflows\codeql.yml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

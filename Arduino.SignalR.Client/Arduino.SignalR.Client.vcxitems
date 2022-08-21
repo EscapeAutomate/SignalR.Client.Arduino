@@ -21,6 +21,7 @@
   <ItemGroup>
     <!-- <ClInclude Include="$(MSBuildThisFileDirectory)Arduino.SignalR.Client.h" /> -->
     <ClInclude Include="$(MSBuildThisFileDirectory)src\ArduinoJson.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)src\Models\Messages.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\libb64\cdecode_inc.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\libb64\cencode_inc.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)src\WebSockets\SocketIOclient.h" />

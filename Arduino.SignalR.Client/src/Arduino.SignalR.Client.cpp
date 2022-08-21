@@ -1,10 +1,9 @@
 #include "Arduino.SignalR.Client.h"
-#include "WebSockets/WebSocketsClient.h"
 
 WebSocketsClient webSocket;
 SignalRClientClass SignalRClient;
 
-void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
+void SignalRClientClass::WebSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 
 	switch (type) {
 	case WStype_DISCONNECTED:
@@ -17,16 +16,18 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 		webSocket.sendTXT("Connected");
 		break;
 	case WStype_TEXT:
-		Serial.printf("[WSc] get text: %s\n", payload);
-
-		// send message to server
-		// webSocket.sendTXT("message here");
-		break;
 	case WStype_BIN:
-		Serial.printf("[WSc] get binary length: %u\n", length);
+		if (waitForHandshake)
+		{
+			waitForHandshake = false;
+			HandshakeResponseMessage message;
+			message.Deserialize(payload, length);
+		}
+		else
+		{
 
-		// send data to server
-		// webSocket.sendBIN(payload, length);
+		}
+
 		break;
 	case WStype_ERROR:
 	case WStype_FRAGMENT_TEXT_START:
@@ -35,40 +36,76 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 	case WStype_FRAGMENT_FIN:
 		break;
 	}
-
 }
 
-void SignalRClientClass::Setup(String address, int port, String path, String username, String password)
+void SignalRClientClass::Setup(const String& address, uint16_t port, const String& path, const String& username, const String& password)
 {
-	// server address, port and URL
-	webSocket.begin("192.168.0.123", 81, "/");
+	if (webSocket.isConnected())
+	{
+		webSocket.disconnect();
+	}
 
-	// event handler
-	webSocket.onEvent(webSocketEvent);
+	webSocket.begin(address, port, path);
 
-	// use HTTP Basic Authorization this is optional remove if not needed
-	webSocket.setAuthorization("user", "Password");
+	webSocket.onEvent(std::bind(&SignalRClientClass::WebSocketEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-	// try ever 5000 again if connection has failed
+	if (!username.isEmpty())
+	{
+		// use HTTP Basic Authorization this is optional remove if not needed
+		webSocket.setAuthorization(username.c_str(), password.c_str());
+	}
+
 	webSocket.setReconnectInterval(5000);
+
+	needSendHandshake = true;
 }
 
-void SignalRClientClass::UseMessagePack()
+void SignalRClientClass::UseMessagepack()
 {
-
+	useMessagepack = true;
 }
 
 void SignalRClientClass::On(char* fctName, SignalRClientOnEvent cbEvent)
 {
-
-}
-
-void SignalRClientClass::Connect()
-{
-
+	if (cbls.count(fctName) == 0)
+	{
+		cbls.insert(std::pair<std::string, SignalRClientOnEvent>(fctName, cbEvent));
+	}
 }
 
 void SignalRClientClass::Invoke(char* fctName, const ArduinoJson::DynamicJsonDocument& doc)
 {
 
+}
+
+void SignalRClientClass::Loop()
+{
+	webSocket.loop();
+
+	if (needSendHandshake)
+	{
+		needSendHandshake = false;
+		waitForHandshake = true;
+
+		HandshakeRequestMessage* message = new HandshakeRequestMessage();
+		message->version = 1;
+
+		if (useMessagepack)
+		{
+			message->protocol = MESSAGEPACK_PROTOCOL;
+		}
+		else
+		{
+			message->protocol = JSON_PROTOCOL;
+		}
+
+		Send(message);
+	}
+}
+
+void SignalRClientClass::Send(BaseMessage* message)
+{
+	String str = message->Serialize();
+
+	webSocket.sendBIN((uint8_t*)str.c_str(), str.length());
 }

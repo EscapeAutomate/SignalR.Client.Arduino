@@ -39,13 +39,13 @@ class WebSocketsClient : protected WebSockets {
     virtual ~WebSocketsClient(void);
 
     void begin(const char * host, uint16_t port, const char * url = "/", const char * protocol = "arduino");
-    void begin(String host, uint16_t port, String url = "/", String protocol = "arduino");
+    void begin(const String& host, uint16_t port, const String& url = "/", const String& protocol = "arduino");
     void begin(IPAddress host, uint16_t port, const char * url = "/", const char * protocol = "arduino");
 
 #if defined(HAS_SSL)
 #ifdef SSL_AXTLS
     void beginSSL(const char * host, uint16_t port, const char * url = "/", const char * fingerprint = "", const char * protocol = "arduino");
-    void beginSSL(String host, uint16_t port, String url = "/", String fingerprint = "", String protocol = "arduino");
+    void beginSSL(const String& host, uint16_t port, const String& url = "/", const String& fingerprint = "", const String& protocol = "arduino");
 #else
     void beginSSL(const char * host, uint16_t port, const char * url = "/", const uint8_t * fingerprint = NULL, const char * protocol = "arduino");
     void beginSslWithCA(const char * host, uint16_t port, const char * url = "/", BearSSL::X509List * CA_cert = NULL, const char * protocol = "arduino");

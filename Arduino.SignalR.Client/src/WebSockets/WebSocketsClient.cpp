@@ -90,7 +90,7 @@ void WebSocketsClient::begin(const char * host, uint16_t port, const char * url,
     DEBUG_WEBSOCKETS("[WS-Client] Websocket Version: " WEBSOCKETS_VERSION "\n");
 }
 
-void WebSocketsClient::begin(String host, uint16_t port, String url, String protocol) {
+void WebSocketsClient::begin(const String& host, uint16_t port, const String& url, const String& protocol) {
     begin(host.c_str(), port, url.c_str(), protocol.c_str());
 }
 
@@ -107,7 +107,7 @@ void WebSocketsClient::beginSSL(const char * host, uint16_t port, const char * u
     _CA_cert      = NULL;
 }
 
-void WebSocketsClient::beginSSL(String host, uint16_t port, String url, String fingerprint, String protocol) {
+void WebSocketsClient::beginSSL(const String& host, uint16_t port, const String& url, const String& fingerprint, const String& protocol) {
     beginSSL(host.c_str(), port, url.c_str(), fingerprint.c_str(), protocol.c_str());
 }
 
