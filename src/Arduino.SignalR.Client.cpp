@@ -3,6 +3,15 @@
 WebSocketsClient webSocket;
 SignalRClientClass SignalRClient;
 
+void hexdump(const void* mem, uint32_t len, uint8_t cols = 16) {
+	const uint8_t* src = (const uint8_t*)mem;
+	for (uint32_t i = 0; i < len; i++) {
+		Serial.printf("%02X ", *src);
+		src++;
+	}
+	Serial.printf("\n");
+}
+
 void SignalRClientClass::WebSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 
 	switch (type) {
@@ -10,22 +19,69 @@ void SignalRClientClass::WebSocketEvent(WStype_t type, uint8_t* payload, size_t 
 		Serial.printf("[WSc] Disconnected!\n");
 		break;
 	case WStype_CONNECTED:
+	{
 		Serial.printf("[WSc] Connected to url: %s\n", payload);
 
-		// send message to server when Connected
-		webSocket.sendTXT("Connected");
-		break;
-	case WStype_TEXT:
-	case WStype_BIN:
-		if (waitForHandshake)
+		waitForHandshake = true;
+
+		HandshakeRequestMessage* handshakeRequestMessage = new HandshakeRequestMessage();
+		handshakeRequestMessage->version = 1;
+
+		if (useMessagepack)
 		{
-			waitForHandshake = false;
-			HandshakeResponseMessage message;
-			message.Deserialize(payload, length);
+			handshakeRequestMessage->protocol = MESSAGEPACK_PROTOCOL;
 		}
 		else
 		{
+			handshakeRequestMessage->protocol = JSON_PROTOCOL;
+		}
 
+		String str = handshakeRequestMessage->Serialize();
+		Serial.println("[SR] Sending handshake!");
+		Serial.println(str);
+
+		webSocket.sendTXT(str);
+		break;
+	}		
+	case WStype_TEXT:
+		Serial.printf("[WSc] message received: %s\n", payload);
+		Serial.printf("[WSc] message received len: %i\n", length);
+
+		if (waitForHandshake)
+		{
+			if (payload[length-1] != 0x1E)
+			{
+				//bad handshake
+				webSocket.disconnect();
+				return;
+			}
+			waitForHandshake = false;
+			HandshakeResponseMessage handshakeResponseMessage;
+			handshakeResponseMessage.Deserialize(payload, length);
+			Serial.print("[SR] Received handshake! Data in error: ");
+			Serial.println(handshakeResponseMessage.error);
+			return;
+		}
+
+		break;
+	case WStype_BIN:
+		hexdump(payload+1, length-1);
+
+		if (waitForHandshake)
+		{
+			if (payload[length - 1] != 0x1E)
+			{
+				Serial.println("[SR] BAD handshake! Closing!");
+				//bad handshake
+				webSocket.disconnect();
+				return;
+			}
+			waitForHandshake = false;
+			HandshakeResponseMessage handshakeResponseMessage;
+			handshakeResponseMessage.Deserialize(payload, length);
+			Serial.print("[SR] Received handshake! Data in error: ");
+			Serial.println(handshakeResponseMessage.error);
+			return;
 		}
 
 		break;
@@ -58,8 +114,6 @@ void SignalRClientClass::Setup(const String& address, uint16_t port, const Strin
 	}
 
 	webSocket.setReconnectInterval(5000);
-
-	needSendHandshake = true;
 }
 
 void SignalRClientClass::UseMessagepack()
@@ -83,26 +137,6 @@ void SignalRClientClass::Invoke(char* fctName, const ArduinoJson::DynamicJsonDoc
 void SignalRClientClass::Loop()
 {
 	webSocket.loop();
-
-	if (needSendHandshake)
-	{
-		needSendHandshake = false;
-		waitForHandshake = true;
-
-		HandshakeRequestMessage* message = new HandshakeRequestMessage();
-		message->version = 1;
-
-		if (useMessagepack)
-		{
-			message->protocol = MESSAGEPACK_PROTOCOL;
-		}
-		else
-		{
-			message->protocol = JSON_PROTOCOL;
-		}
-
-		Send(message);
-	}
 }
 
 void SignalRClientClass::Send(BaseMessage* message)

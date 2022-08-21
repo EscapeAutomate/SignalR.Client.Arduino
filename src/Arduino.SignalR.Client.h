@@ -12,7 +12,6 @@ class SignalRClientClass
 {
 private:
 	bool useMessagepack = false;
-	bool needSendHandshake = false;
 	bool waitForHandshake = false;
 	std::map<std::string, SignalRClientOnEvent> cbls;
 
