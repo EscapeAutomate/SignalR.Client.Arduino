@@ -1,10 +1,13 @@
-#include "Arduino.SignalR.Client.h"
+#include "SignalR.Client.Arduino.h"
+#include "WiFi.h"
 
 // the setup function runs once when you press reset or power the board
 void setup() {
 	Serial.begin(115200);
 
-	SignalRClient.Setup("192.168.1.1", 5000, "/TestHub", "user", "password");
+	WiFi.begin("OMEGA-0000", "134Apwwn44");
+
+	SignalRClient.Setup("192.168.1.164", 6000, "/TestHub", "user", "password");
 	SignalRClient.UseMessagepack();
 
 	SignalRClient.On("ReceivedMessage", ReceivedMessage);

@@ -8,7 +8,7 @@
     }
   },
   "profiles": {
-    "Arduino.SignalR.Client.DemoServer": {
+    "SignalR.Client.Arduino.DemoServer": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,

@@ -1,4 +1,4 @@
-namespace Arduino.SignalR.Client.DemoServer
+namespace SignalR.Client.Arduino.DemoServer
 {
     public class Program
     {

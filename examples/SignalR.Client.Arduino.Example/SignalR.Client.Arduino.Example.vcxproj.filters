@@ -15,13 +15,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Arduino.SignalR.Client.Example.ino" />
-    <None Include="src\arduino folders read me.txt">
+    <None Include="SignalR.Client.Arduino.Example.ino" />
       <Filter>Misc Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="__vm\.Arduino.SignalR.Client.Example.vsarduino.h">
+    <ClInclude Include="__vm\.SignalR.Client.Arduino.Example.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
