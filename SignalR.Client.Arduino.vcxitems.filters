@@ -11,14 +11,17 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(MSBuildThisFileDirectory)src\SignalR.Client.Arduino.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)src\SignalR_Client_Arduino.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)messagepack_hub_protocol.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)readme.txt" />
     <Text Include="$(MSBuildThisFileDirectory)library.properties" />
-    <Text Include="$(MSBuildThisFileDirectory)src\SignalR.Client.Arduino.h">
+    <Text Include="$(MSBuildThisFileDirectory)src\SignalR_Client_Arduino.h">
       <Filter>Header Files</Filter>
     </Text>
   </ItemGroup>
