@@ -1,16 +1,18 @@
 #ifndef _SignalR_h
 #define _SignalR_h
 
-#include "libs/WebSockets/WebSocketsClient.h"
-#include "libs/ArduinoJson/ArduinoJson.hpp"
-#include <map>
+#if defined(ARDUINO)
+#include <WebSocketsClient.h>
+#endif
 
-typedef std::function<void(ArduinoJson::DynamicJsonDocument* doc)> SignalRClientOnEvent;
+#include <signalrclient/hub_connection_builder.h>
+
+//typedef std::function<void(ArduinoJson::DynamicJsonDocument* doc)> SignalRClientOnEvent;
 
 class SignalRClientClass
 {
 private:
-	bool useMessagepack = false;
+	/*bool useMessagepack = false;
 	bool waitForHandshake = false;
 	std::map<std::string, SignalRClientOnEvent> cbls;
 
@@ -22,7 +24,7 @@ public:
 	void UseMessagepack();
 	void On(char* fctName, SignalRClientOnEvent cbEvent);
 	void Invoke(char* fctName, const ArduinoJson::DynamicJsonDocument& doc);
-	void Loop();
+	void Loop();*/
 };
 
 extern SignalRClientClass SignalRClient;

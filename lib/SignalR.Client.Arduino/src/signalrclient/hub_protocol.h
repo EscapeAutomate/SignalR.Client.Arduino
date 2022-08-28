@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "libs/signalrclient/signalr_value.h"
-#include "libs/signalrclient/transfer_format.h"
+#include "signalr_value.h"
+#include "transfer_format.h"
 #include "message_type.h"
 #include <memory>
 

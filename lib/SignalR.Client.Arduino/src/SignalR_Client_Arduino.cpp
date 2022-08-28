@@ -7,10 +7,12 @@
 
 #include "SignalR_Client_Arduino.h"
 
+#if defined(ARDUINO)
 WebSocketsClient webSocket;
+#endif
 SignalRClientClass SignalRClient;
 
-void SignalRClientClass::WebSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
+/*void SignalRClientClass::WebSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 	switch (type) {
 	case WStype_DISCONNECTED:
 		Serial.printf("[WSc] Disconnected!\n");
@@ -142,4 +144,4 @@ void SignalRClientClass::Send(BaseMessage* message)
 	String str = message->Serialize();
 
 	webSocket.sendBIN((uint8_t*)str.c_str(), str.length());
-}
+}*/

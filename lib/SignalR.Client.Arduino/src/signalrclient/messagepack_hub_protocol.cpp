@@ -1,81 +1,185 @@
-#include "libs/signalrclient/messagepack_hub_protocol.h"
-#include "libs/signalrclient/message_type.h"
-#include "libs/signalrclient/signalr_exception.h"
-#include "libs/signalrclient/binary_message_parser.h"
-#include "libs/signalrclient/binary_message_formatter.h"
+#include "messagepack_hub_protocol.h"
+#include "message_type.h"
+#include "signalr_exception.h"
+#include "binary_message_parser.h"
+#include "binary_message_formatter.h"
+#include <ArduinoJson.h>
+#include <cmath>
 
 namespace signalr
 {
+    void pack_messagepack(const signalr::value& v, JsonArray& packer)
+    {
+        switch (v.type())
+        {
+        case signalr::value_type::boolean:
+        {
+            if (v.as_bool())
+            {
+                packer.add(true);
+            }
+            else
+            {
+                packer.add(false);
+            }
+            return;
+        }
+        case signalr::value_type::float64:
+        {
+            auto value = v.as_double();
+            double intPart;
+            // Workaround for 1.0 being output as 1.0 instead of 1
+            // because the server expects certain values to be 1 instead of 1.0 (like protocol version)
+            if (std::modf(value, &intPart) == 0)
+            {
+                if (value < 0)
+                {
+                    if (value >= (double)INT64_MIN)
+                    {
+                        // Fits within int64_t
+                        packer.add(static_cast<int64_t>(intPart));
+                        return;
+                    }
+                    else
+                    {
+                        // Remain as double
+                        packer.add(value);
+                        return;
+                    }
+                }
+                else
+                {
+                    if (value <= (double)UINT64_MAX)
+                    {
+                        // Fits within uint64_t
+                        packer.add(static_cast<uint64_t>(intPart));
+                        return;
+                    }
+                    else
+                    {
+                        // Remain as double
+                        packer.add(value);
+                        return;
+                    }
+                }
+            }
+            packer.add(v.as_double());
+            return;
+        }
+        case signalr::value_type::string:
+        {
+            packer.add(v.as_string());
+            return;
+        }
+        case signalr::value_type::array:
+        {
+            const auto& array = v.as_array();            
+            auto arr = packer.createNestedArray();            
+            for (auto& val : array)
+            {
+                pack_messagepack(val, arr);
+            }
+            return;
+        }
+        case signalr::value_type::map:
+        {
+            const auto& obj = v.as_map();
+            auto nobj = packer.createNestedObject();
+            for (auto& val : obj)
+            {
+                // allocate the memory for the document
+                // create an empty array
+                StaticJsonDocument<128> doc;
+                JsonArray array = doc.to<JsonArray>();
+                
+                pack_messagepack(val.second, array);
+
+                nobj[val.first] = array.getElement(0);
+            }
+            return;
+        }
+        case signalr::value_type::binary:
+        {
+            std::string str(v.as_binary().begin(), v.as_binary().end());
+            packer.add(str.c_str());
+            return;
+        }
+        case signalr::value_type::null:
+        default:
+        {
+            packer.add(nullptr);
+            return;
+        }
+        }
+    }
 
     std::string messagepack_hub_protocol::write_message(const hub_message* hub_message) const
     {
-        string_wrapper str;
-        msgpack::packer<string_wrapper> packer(str);
+        // Max message size is 4096 bytes
+        DynamicJsonDocument doc(4096);
 
-#pragma warning (push)
-#pragma warning (disable: 4061)
         switch (hub_message->message_type)
         {
         case message_type::invocation:
         {
             auto invocation = static_cast<invocation_message const*>(hub_message);
 
-            packer.pack_array(6);
+            // MessageType
+            doc.add(static_cast<int>(message_type::invocation));
 
-            packer.pack_int(static_cast<int>(message_type::invocation));
             // Headers
-            packer.pack_map(0);
+            doc.createNestedObject();
 
+            // InvocationId
             if (invocation->invocation_id.empty())
             {
-                packer.pack_nil();
+                doc.add(nullptr);
             }
             else
             {
-                packer.pack_str(static_cast<uint32_t>(invocation->invocation_id.length()));
-                packer.pack_str_body(invocation->invocation_id.data(), static_cast<uint32_t>(invocation->invocation_id.length()));
+                doc.add(invocation->invocation_id);
             }
-
-            packer.pack_str(static_cast<uint32_t>(invocation->target.length()));
-            packer.pack_str_body(invocation->target.data(), static_cast<uint32_t>(invocation->target.length()));
-
-            packer.pack_array(static_cast<uint32_t>(invocation->arguments.size()));
+            
+            // Target
+            doc.add(invocation->target);
+            
+            // Even if it's called JsonArray it can be serialized in msgpack
+            JsonArray arguments = doc.createNestedArray();
             for (auto& val : invocation->arguments)
             {
-                pack_messagepack(val, packer);
+                pack_messagepack(val, arguments);
             }
 
             // StreamIds
-            packer.pack_array(0);
+            doc.createNestedArray();
 
             break;
         }
         case message_type::completion:
         {
             auto completion = static_cast<completion_message const*>(hub_message);
-
-            size_t result_kind = completion->error.empty() ? (completion->has_result ? 3U : 2U) : 1U;
-            packer.pack_array(4U + (result_kind != 2U ? 1U : 0U));
-
-            packer.pack_int(static_cast<int>(message_type::completion));
+            
+            // MessageType
+            doc.add(static_cast<int>(message_type::completion));
 
             // Headers
-            packer.pack_map(0);
+            doc.createNestedObject();
 
-            packer.pack_str(static_cast<uint32_t>(completion->invocation_id.length()));
-            packer.pack_str_body(completion->invocation_id.data(), static_cast<uint32_t>(completion->invocation_id.length()));
+            doc.add(completion->invocation_id);
 
-            packer.pack_int(static_cast<int>(result_kind));
+            size_t result_kind = completion->error.empty() ? (completion->has_result ? 3U : 2U) : 1U;
+
+            // Even if it's called JsonArray it can be serialized in msgpack
+            JsonArray completion_result = doc.createNestedArray();
             switch (result_kind)
             {
                 // error result
             case 1:
-                packer.pack_str(static_cast<uint32_t>(completion->error.length()));
-                packer.pack_str_body(completion->error.data(), static_cast<uint32_t>(completion->error.length()));
+                completion_result.add(completion->error);
                 break;
                 // non-void result
             case 3:
-                pack_messagepack(completion->result, packer);
+                pack_messagepack(completion->result, completion_result);
                 break;
             }
 
@@ -86,21 +190,28 @@ namespace signalr
             // If we need the ping this is how you get it
             // auto ping = static_cast<ping_message const*>(hub_message);
 
-            packer.pack_array(1);
-            packer.pack_int(static_cast<int>(message_type::ping));
-
+            doc.add(static_cast<int>(message_type::ping));
             break;
         }
         default:
             break;
         }
-#pragma warning (pop)
 
-        binary_message_formatter::write_length_prefix(str.str);
-        return str.str;
+         std::string output;
+         serializeMsgPack(doc, output);
+
+        binary_message_formatter::write_length_prefix(output);
+        return output;
     }
 
     std::vector<std::unique_ptr<hub_message>> messagepack_hub_protocol::parse_messages(const std::string& message) const
+    {
+        std::vector<std::unique_ptr<hub_message>> vec;
+
+        return vec;
+    }
+
+    /*std::vector<std::unique_ptr<hub_message>> messagepack_hub_protocol::parse_messages(const std::string& message) const
     {
         std::vector<std::unique_ptr<hub_message>> vec;
 
@@ -148,8 +259,6 @@ namespace signalr
             auto type = msgpack_obj_index->via.i64;
             ++msgpack_obj_index;
 
-#pragma warning (push)
-#pragma warning (disable: 4061)
             switch (static_cast<message_type>(type))
             {
             case message_type::invocation:
@@ -267,7 +376,6 @@ namespace signalr
                 // Future protocol changes can add message types, old clients can ignore them
                 break;
             }
-#pragma warning (pop)
 
             remaining_message += length_of_message;
             assert(remaining_message_length - length_of_message < remaining_message_length);
@@ -275,5 +383,5 @@ namespace signalr
         }
 
         return vec;
-    }
+    }*/
 }

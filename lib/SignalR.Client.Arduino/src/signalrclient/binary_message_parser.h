@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <stddef.h>
+
 namespace signalr
 {
     namespace binary_message_parser

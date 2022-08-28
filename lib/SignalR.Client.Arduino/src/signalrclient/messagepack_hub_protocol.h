@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "libs/signalrclient/signalr_value.h"
-#include "libs/signalrclient/hub_protocol.h"
+#include "signalr_value.h"
+#include "hub_protocol.h"
 
 namespace signalr
 {
@@ -27,7 +27,7 @@ namespace signalr
 
         signalr::transfer_format transfer_format() const
         {
-            return transfer_format::binary;
+            return signalr::transfer_format::binary;
         }
 
         ~messagepack_hub_protocol() {}
