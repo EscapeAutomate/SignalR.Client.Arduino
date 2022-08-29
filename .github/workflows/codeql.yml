@@ -66,13 +66,16 @@ jobs:
     - name: Install PlatformIO
       run: |
         python -m pip install --upgrade pip
-        pip install --upgrade platformio
+        pip install --upgrade platformio cpp-coveralls
 
     - name: Build library
       run: pio run --environment esp32-s2-saola-1
       
     - name: Run Test
-      run: pio test --environment native
+      run: pio test --environment native      
+      
+    - name: Push coveralls
+      run: coveralls --exclude lib --exclude tests --gcov-options '\-lp'
       
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
