@@ -4,7 +4,9 @@
 #include "binary_message_parser.h"
 #include "binary_message_formatter.h"
 #include <ArduinoJson.h>
+#include <ArduinoJson/MsgPack/endianess.hpp>
 #include <cmath>
+#include <cassert>
 
 namespace signalr
 {
@@ -140,8 +142,30 @@ namespace signalr
         }
         case signalr::value_type::binary:
         {
-            std::string str(v.as_binary().begin(), v.as_binary().end());
-            packer.add(str.c_str());
+            size_t l = v.as_binary().size();
+            std::vector<uint8_t> bin = v.as_binary();
+            uint8_t buffer[5];
+
+            if(l < 256) {
+                buffer[0] = 0xc4;
+                buffer[1] = static_cast<uint8_t>(l);
+                bin.insert(bin.begin(), buffer, buffer + 2);
+            } else if(l < 65536) {
+                buffer[0] = 0xc5;
+                auto val = uint16_t(l);
+                ARDUINOJSON_NAMESPACE::fixEndianess(val);
+                auto b = reinterpret_cast<uint8_t*>(&val);
+                bin.insert(bin.begin(), buffer, buffer + 3);
+            } else {
+                buffer[0] = 0xc6;
+                auto val = uint32_t(l);
+                ARDUINOJSON_NAMESPACE::fixEndianess(val);
+                auto b = reinterpret_cast<uint8_t*>(&val);
+                bin.insert(bin.begin(), buffer, buffer + 5);
+            }
+            
+            auto value = serialized(reinterpret_cast<char*>(bin.data()), bin.size());
+            packer.add(value);            
             return;
         }
         case signalr::value_type::null:
