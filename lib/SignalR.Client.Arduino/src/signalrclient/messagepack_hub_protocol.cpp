@@ -8,6 +8,46 @@
 
 namespace signalr
 {
+    signalr::value createValue(const JsonVariant& v)
+    {
+        if(v.is<bool>())
+        {
+            return signalr::value(v.as<bool>());
+        }
+        else if(v.is<double>())
+        {
+            return signalr::value(v.as<double>());
+        }
+        else if(v.is<std::string>())
+        {
+            return signalr::value(v.as<std::string>());
+        }
+        else if(v.is<std::string>())
+        {
+            return signalr::value(v.as<std::string>());
+        }
+        else if(v.is<JsonArray>())
+        {
+            auto arr = v.to<JsonArray>();
+            std::vector<signalr::value> vec;
+            for (JsonVariant ar : arr) {
+                vec.push_back(createValue(ar));
+            }
+            return signalr::value(std::move(vec));
+        }
+        else if(v.is<JsonObject>())
+        {
+            auto obj = v.to<JsonObject>();
+            std::map<std::string, signalr::value> map;
+            for (JsonPair p : obj) {
+                map.insert({ std::string(p.key().c_str()), createValue(p.value().as<JsonVariant>()) });
+            }
+            return signalr::value(std::move(map));
+        }
+        
+        return signalr::value();
+    }
+
     void pack_messagepack(const signalr::value& v, JsonArray& packer)
     {
         switch (v.type())
@@ -208,13 +248,6 @@ namespace signalr
     {
         std::vector<std::unique_ptr<hub_message>> vec;
 
-        return vec;
-    }
-
-    /*std::vector<std::unique_ptr<hub_message>> messagepack_hub_protocol::parse_messages(const std::string& message) const
-    {
-        std::vector<std::unique_ptr<hub_message>> vec;
-
         size_t length_prefix_length;
         size_t length_of_message;
         const char* remaining_message = message.data();
@@ -226,44 +259,41 @@ namespace signalr
             remaining_message += length_prefix_length;
             remaining_message_length -= length_prefix_length;
             assert(remaining_message_length >= length_of_message);
+            
+            DynamicJsonDocument doc(length_of_message);
 
-            msgpack::unpacker pac;
-            pac.reserve_buffer(length_of_message);
-            memcpy(pac.buffer(), remaining_message, length_of_message);
-            pac.buffer_consumed(length_of_message);
-            msgpack::object_handle obj_handle;
-
-            if (!pac.next(obj_handle))
+            if (deserializeMsgPack(doc, remaining_message) != DeserializationError::Ok)
             {
                 throw signalr_exception("messagepack object was incomplete");
             }
 
-            auto& msgpack_obj = obj_handle.get();
-
-            if (msgpack_obj.type != msgpack::type::ARRAY)
+            if (!doc.is<JsonArray>())
             {
                 throw signalr_exception("Message was not an 'array' type");
             }
+            
+            JsonArray arr = doc.as<JsonArray>();
 
-            auto num_elements_of_message = msgpack_obj.via.array.size;
-            if (msgpack_obj.via.array.size == 0)
+            if (arr.size() == 0)
             {
                 throw signalr_exception("Message was an empty array");
             }
 
-            auto msgpack_obj_index = msgpack_obj.via.array.ptr;
-            if (msgpack_obj_index->type != msgpack::type::POSITIVE_INTEGER)
+            if (!arr[0].is<int>())
             {
                 throw signalr_exception("reading 'type' as int failed");
             }
-            auto type = msgpack_obj_index->via.i64;
+
+            int msgpack_obj_index = 0;
+
+            auto type = arr[msgpack_obj_index].as<int>();
             ++msgpack_obj_index;
 
             switch (static_cast<message_type>(type))
             {
             case message_type::invocation:
             {
-                if (num_elements_of_message < 5)
+                if (arr.size() < 5)
                 {
                     throw signalr_exception("invocation message has too few properties");
                 }
@@ -272,42 +302,39 @@ namespace signalr
                 ++msgpack_obj_index;
 
                 std::string invocation_id;
-                if (msgpack_obj_index->type == msgpack::type::STR)
+                if (arr[msgpack_obj_index].is<std::string>())
                 {
-                    invocation_id.append(msgpack_obj_index->via.str.ptr, msgpack_obj_index->via.str.size);
+                    invocation_id.append(arr[msgpack_obj_index].as<std::string>());
                 }
-                else if (msgpack_obj_index->type != msgpack::type::NIL)
+                else if (!arr[msgpack_obj_index].isNull())
                 {
                     throw signalr_exception("reading 'invocationId' as string failed");
                 }
                 ++msgpack_obj_index;
 
-                if (msgpack_obj_index->type != msgpack::type::STR)
+                if (arr[msgpack_obj_index].is<std::string>())
                 {
                     throw signalr_exception("reading 'target' as string failed");
                 }
 
-                std::string target(msgpack_obj_index->via.str.ptr, msgpack_obj_index->via.str.size);
+                std::string target(arr[msgpack_obj_index].as<std::string>());
                 ++msgpack_obj_index;
 
-                if (msgpack_obj_index->type != msgpack::type::ARRAY)
+                if (!arr[msgpack_obj_index].is<JsonArray>())
                 {
                     throw signalr_exception("reading 'arguments' as array failed");
                 }
 
                 std::vector<signalr::value> args;
-                auto size = msgpack_obj_index->via.array.size;
-                auto arg_array_index = msgpack_obj_index->via.array.ptr;
-                for (uint32_t i = 0; i < size; ++i)
-                {
-                    args.emplace_back(createValue(*arg_array_index));
-                    ++arg_array_index;
+                auto argsValues = arr[msgpack_obj_index].as<JsonArray>();
+                for (JsonVariant ar : argsValues) {
+                    args.emplace_back(createValue(ar));
                 }
 
                 vec.emplace_back(std::unique_ptr<hub_message>(
                     new invocation_message(std::move(invocation_id), std::move(target), std::move(args))));
 
-                if (num_elements_of_message > 5)
+                if (arr.size() > 5)
                 {
                     // This is for the StreamIds when they are supported
                     ++msgpack_obj_index;
@@ -315,7 +342,7 @@ namespace signalr
 
                 break;
             }
-            case message_type::completion:
+            /*case message_type::completion:
             {
                 if (num_elements_of_message < 4)
                 {
@@ -365,7 +392,7 @@ namespace signalr
                 vec.emplace_back(std::unique_ptr<hub_message>(
                     new completion_message(std::move(invocation_id), std::move(error), std::move(result), result_kind == 3)));
                 break;
-            }
+            }*/
             case message_type::ping:
             {
                 vec.emplace_back(std::unique_ptr<hub_message>(new ping_message()));
@@ -383,5 +410,5 @@ namespace signalr
         }
 
         return vec;
-    }*/
+    }
 }
