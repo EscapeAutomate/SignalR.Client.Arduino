@@ -30,7 +30,7 @@ namespace signalr
         }
         else if(v.is<JsonArray>())
         {
-            auto arr = v.to<JsonArray>();
+            auto arr = v.as<JsonArray>();
             std::vector<signalr::value> vec;
             for (JsonVariant ar : arr) {
                 vec.push_back(createValue(ar));
@@ -39,7 +39,7 @@ namespace signalr
         }
         else if(v.is<JsonObject>())
         {
-            auto obj = v.to<JsonObject>();
+            auto obj = v.as<JsonObject>();
             std::map<std::string, signalr::value> map;
             for (JsonPair p : obj) {
                 map.insert({ std::string(p.key().c_str()), createValue(p.value().as<JsonVariant>()) });
