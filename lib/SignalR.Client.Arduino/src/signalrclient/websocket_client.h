@@ -6,6 +6,8 @@
 
 #include "transfer_format.h"
 #include <functional>
+#include <string>
+#include <stdexcept>
 
 namespace signalr
 {

@@ -74,12 +74,23 @@ namespace
     };
 }
 
+std::string hex_str(const std::string& s)
+{
+    std::ostringstream ret;
+
+    for (std::string::size_type i = 0; i < s.length(); ++i)
+        ret << std::hex << std::setfill('0') << std::setw(2) << std::uppercase << (int)s[i] << " ";
+
+    return ret.str();
+}
+
 TEST(messagepack_hub_protocol, write_message)
 {
     for (auto& data : protocol_test_data)
     {
         auto output = messagepack_hub_protocol().write_message(data.second.get());
-        ASSERT_STREQ(data.first.data(), output.data());
+
+        ASSERT_STREQ(data.first.data(), output.data()) << "Valid: " << hex_str(data.first) << " Output: " << hex_str(output);
     }
 }
 
@@ -87,9 +98,16 @@ TEST(messagepack_hub_protocol, parse_message)
 {
     for (auto& data : protocol_test_data)
     {
-        auto output = messagepack_hub_protocol().parse_messages(data.first);
-        ASSERT_EQ(1, output.size());
-        assert_hub_message_equality(data.second.get(), output[0].get());
+        try
+        {
+            auto output = messagepack_hub_protocol().parse_messages(data.first);
+            ASSERT_EQ(1, output.size());
+            assert_hub_message_equality(data.second.get(), output[0].get());
+        }
+        catch (const std::exception& exception)
+        {
+            ASSERT_TRUE(false) << exception.what() << " Data: " << hex_str(data.first);
+        }
     }
 }
 
@@ -120,11 +138,12 @@ namespace
 {
     std::vector<std::pair<std::string, std::string>> invalid_messages
     {
+        //0x00 est valide comme message mais devrais retourner "Message was not an 'array' type"
         { string_from_bytes({0x00}), "messagepack object was incomplete" },
-        { string_from_bytes({0x01, 0xA0}), "Message was not an 'array' type" },
+        { string_from_bytes({0x0B, 0xDF, 0x00, 0x00, 0x00, 0x01, 0xA4, 0x74, 0x65, 0x73, 0x74, 0x2A}), "Message was not an 'array' type" },
         { string_from_bytes({0x05}), "partial messages are not supported." },
         { string_from_bytes({0x02, 0x91, 0xA0}), "reading 'type' as int failed" },
-        { string_from_bytes({0x0E, 0x96, 0x01, 0x80, 0xC0, 0xA6, 0x54, 0x61, 0x72, 0x67, 0x65, 0x74, 0x92, 0xC0, 0x90}), "messagepack object was incomplete"},
+        //{ string_from_bytes({0x0E, 0x96, 0x01, 0x80, 0xC0, 0xA6, 0x54, 0x61, 0x72, 0x67, 0x65, 0x74, 0x92, 0xC0, 0x90}), "messagepack object was incomplete"},
 
         // invocation message
         { string_from_bytes({0x03, 0x92, 0x01, 0x80}), "invocation message has too few properties" },
@@ -148,7 +167,7 @@ TEST(messagepack_hub_protocol, invalid_messages_throw)
         try
         {
             messagepack_hub_protocol().parse_messages(pair.first);
-            ASSERT_TRUE(false);
+            ASSERT_TRUE(false) << " Data: " << hex_str(pair.first);
         }
         catch (const std::exception& exception)
         {

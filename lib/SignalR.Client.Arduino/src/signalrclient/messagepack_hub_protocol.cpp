@@ -231,19 +231,20 @@ namespace signalr
 
             doc.add(completion->invocation_id);
 
-            size_t result_kind = completion->error.empty() ? (completion->has_result ? 3U : 2U) : 1U;
+            auto result_kind = completion->error.empty() ? (completion->has_result ? 3U : 2U) : 1U;
 
-            // Even if it's called JsonArray it can be serialized in msgpack
-            JsonArray completion_result = doc.createNestedArray();
+            doc.add(result_kind);
+
             switch (result_kind)
             {
                 // error result
             case 1:
-                completion_result.add(completion->error);
+                doc.add(completion->error);
                 break;
                 // non-void result
             case 3:
-                pack_messagepack(completion->result, completion_result);
+                auto arr = doc.as<JsonArray>();
+                pack_messagepack(completion->result, arr);
                 break;
             }
 
@@ -284,9 +285,10 @@ namespace signalr
             remaining_message_length -= length_prefix_length;
             assert(remaining_message_length >= length_of_message);
             
-            DynamicJsonDocument doc(length_of_message);
+            DynamicJsonDocument doc(4096);
+            auto err = deserializeMsgPack(doc, remaining_message);
 
-            if (deserializeMsgPack(doc, remaining_message) != DeserializationError::Ok)
+            if (err != DeserializationError::Ok || remaining_message_length < 2)
             {
                 throw signalr_exception("messagepack object was incomplete");
             }
@@ -308,9 +310,9 @@ namespace signalr
                 throw signalr_exception("reading 'type' as int failed");
             }
 
-            int msgpack_obj_index = 0;
+            auto msgpack_obj_index = arr.begin();
 
-            auto type = arr[msgpack_obj_index].as<int>();
+            auto type = (*msgpack_obj_index).as<int>();
             ++msgpack_obj_index;
 
             switch (static_cast<message_type>(type))
@@ -326,31 +328,31 @@ namespace signalr
                 ++msgpack_obj_index;
 
                 std::string invocation_id;
-                if (arr[msgpack_obj_index].is<std::string>())
+                if ((*msgpack_obj_index).is<std::string>())
                 {
-                    invocation_id.append(arr[msgpack_obj_index].as<std::string>());
+                    invocation_id.append((*msgpack_obj_index).as<std::string>());
                 }
-                else if (!arr[msgpack_obj_index].isNull())
+                else if (!(*msgpack_obj_index).isNull())
                 {
                     throw signalr_exception("reading 'invocationId' as string failed");
                 }
                 ++msgpack_obj_index;
 
-                if (arr[msgpack_obj_index].is<std::string>())
+                if (!(*msgpack_obj_index).is<std::string>())
                 {
                     throw signalr_exception("reading 'target' as string failed");
                 }
 
-                std::string target(arr[msgpack_obj_index].as<std::string>());
+                std::string target((*msgpack_obj_index).as<std::string>());
                 ++msgpack_obj_index;
 
-                if (!arr[msgpack_obj_index].is<JsonArray>())
+                if (!(*msgpack_obj_index).is<JsonArray>())
                 {
                     throw signalr_exception("reading 'arguments' as array failed");
                 }
 
                 std::vector<signalr::value> args;
-                auto argsValues = arr[msgpack_obj_index].as<JsonArray>();
+                auto argsValues = (*msgpack_obj_index).as<JsonArray>();
                 for (JsonVariant ar : argsValues) {
                     args.emplace_back(createValue(ar));
                 }
@@ -366,9 +368,9 @@ namespace signalr
 
                 break;
             }
-            /*case message_type::completion:
+            case message_type::completion:
             {
-                if (num_elements_of_message < 4)
+                if (arr.size() < 4)
                 {
                     throw signalr_exception("completion message has too few properties");
                 }
@@ -376,21 +378,21 @@ namespace signalr
                 // HEADERS
                 ++msgpack_obj_index;
 
-                if (msgpack_obj_index->type != msgpack::type::STR)
+                if (!(*msgpack_obj_index).is<std::string>())
                 {
                     throw signalr_exception("reading 'invocationId' as string failed");
                 }
-                std::string invocation_id(msgpack_obj_index->via.str.ptr, msgpack_obj_index->via.str.size);
+                std::string invocation_id((*msgpack_obj_index).as<std::string>());
                 ++msgpack_obj_index;
 
-                if (msgpack_obj_index->type != msgpack::type::POSITIVE_INTEGER)
+                if (!(*msgpack_obj_index).is<int>())
                 {
                     throw signalr_exception("reading 'result_kind' as int failed");
                 }
-                auto result_kind = msgpack_obj_index->via.i64;
+                auto result_kind = (*msgpack_obj_index).as<int>();
                 ++msgpack_obj_index;
 
-                if (num_elements_of_message < 5 && result_kind != 2)
+                if (arr.size() < 5 && result_kind != 2)
                 {
                     throw signalr_exception("completion message has too few properties");
                 }
@@ -402,11 +404,11 @@ namespace signalr
                 // 3: non void result
                 if (result_kind == 1)
                 {
-                    if (msgpack_obj_index->type != msgpack::type::STR)
+                    if (!(*msgpack_obj_index).is<std::string>())
                     {
                         throw signalr_exception("reading 'error' as string failed");
                     }
-                    error.append(msgpack_obj_index->via.str.ptr, msgpack_obj_index->via.str.size);
+                    error.append((*msgpack_obj_index).as<std::string>());
                 }
                 else if (result_kind == 3)
                 {
@@ -416,7 +418,7 @@ namespace signalr
                 vec.emplace_back(std::unique_ptr<hub_message>(
                     new completion_message(std::move(invocation_id), std::move(error), std::move(result), result_kind == 3)));
                 break;
-            }*/
+            }
             case message_type::ping:
             {
                 vec.emplace_back(std::unique_ptr<hub_message>(new ping_message()));
