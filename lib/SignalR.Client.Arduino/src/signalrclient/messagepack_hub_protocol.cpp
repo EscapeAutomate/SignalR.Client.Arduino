@@ -3,6 +3,7 @@
 #include "signalr_exception.h"
 #include "binary_message_parser.h"
 #include "binary_message_formatter.h"
+#include "json_helpers.h"
 #include <ArduinoJson.h>
 #include <ArduinoJson/MsgPack/endianess.hpp>
 #include <cmath>
@@ -10,170 +11,130 @@
 
 namespace signalr
 {
-    signalr::value createValue(const JsonVariant& v)
-    {
-        if(v.is<bool>())
-        {
-            return signalr::value(v.as<bool>());
-        }
-        else if(v.is<double>())
-        {
-            return signalr::value(v.as<double>());
-        }
-        else if(v.is<std::string>())
-        {
-            return signalr::value(v.as<std::string>());
-        }
-        else if(v.is<std::string>())
-        {
-            return signalr::value(v.as<std::string>());
-        }
-        else if(v.is<JsonArray>())
-        {
-            auto arr = v.as<JsonArray>();
-            std::vector<signalr::value> vec;
-            for (JsonVariant ar : arr) {
-                vec.push_back(createValue(ar));
-            }
-            return signalr::value(std::move(vec));
-        }
-        else if(v.is<JsonObject>())
-        {
-            auto obj = v.as<JsonObject>();
-            std::map<std::string, signalr::value> map;
-            for (JsonPair p : obj) {
-                map.insert({ std::string(p.key().c_str()), createValue(p.value().as<JsonVariant>()) });
-            }
-            return signalr::value(std::move(map));
-        }
-        
-        return signalr::value();
-    }
-
     void pack_messagepack(const signalr::value& v, JsonArray& packer)
     {
         switch (v.type())
         {
-        case signalr::value_type::boolean:
-        {
-            if (v.as_bool())
+            case signalr::value_type::boolean:
             {
-                packer.add(true);
-            }
-            else
-            {
-                packer.add(false);
-            }
-            return;
-        }
-        case signalr::value_type::float64:
-        {
-            auto value = v.as_double();
-            double intPart;
-            // Workaround for 1.0 being output as 1.0 instead of 1
-            // because the server expects certain values to be 1 instead of 1.0 (like protocol version)
-            if (std::modf(value, &intPart) == 0)
-            {
-                if (value < 0)
+                if (v.as_bool())
                 {
-                    if (value >= (double)INT64_MIN)
-                    {
-                        // Fits within int64_t
-                        packer.add(static_cast<int64_t>(intPart));
-                        return;
-                    }
-                    else
-                    {
-                        // Remain as double
-                        packer.add(value);
-                        return;
-                    }
+                    packer.add(true);
                 }
                 else
                 {
-                    if (value <= (double)UINT64_MAX)
+                    packer.add(false);
+                }
+                return;
+            }
+            case signalr::value_type::float64:
+            {
+                auto value = v.as_double();
+                double intPart;
+                // Workaround for 1.0 being output as 1.0 instead of 1
+                // because the server expects certain values to be 1 instead of 1.0 (like protocol version)
+                if (std::modf(value, &intPart) == 0)
+                {
+                    if (value < 0)
                     {
-                        // Fits within uint64_t
-                        packer.add(static_cast<uint64_t>(intPart));
-                        return;
+                        if (value >= (double)INT64_MIN)
+                        {
+                            // Fits within int64_t
+                            packer.add(static_cast<int64_t>(intPart));
+                            return;
+                        }
+                        else
+                        {
+                            // Remain as double
+                            packer.add(value);
+                            return;
+                        }
                     }
                     else
                     {
-                        // Remain as double
-                        packer.add(value);
-                        return;
+                        if (value <= (double)UINT64_MAX)
+                        {
+                            // Fits within uint64_t
+                            packer.add(static_cast<uint64_t>(intPart));
+                            return;
+                        }
+                        else
+                        {
+                            // Remain as double
+                            packer.add(value);
+                            return;
+                        }
                     }
                 }
+                packer.add(v.as_double());
+                return;
             }
-            packer.add(v.as_double());
-            return;
-        }
-        case signalr::value_type::string:
-        {
-            packer.add(v.as_string());
-            return;
-        }
-        case signalr::value_type::array:
-        {
-            const auto& array = v.as_array();            
-            auto arr = packer.createNestedArray();            
-            for (auto& val : array)
+            case signalr::value_type::string:
             {
-                pack_messagepack(val, arr);
+                packer.add(v.as_string());
+                return;
             }
-            return;
-        }
-        case signalr::value_type::map:
-        {
-            const auto& obj = v.as_map();
-            auto nobj = packer.createNestedObject();
-            for (auto& val : obj)
+            case signalr::value_type::array:
             {
-                // allocate the memory for the document
-                // create an empty array
-                StaticJsonDocument<128> doc;
-                JsonArray array = doc.to<JsonArray>();
+                const auto& array = v.as_array();            
+                auto arr = packer.createNestedArray();            
+                for (auto& val : array)
+                {
+                    pack_messagepack(val, arr);
+                }
+                return;
+            }
+            case signalr::value_type::map:
+            {
+                const auto& obj = v.as_map();
+                auto nobj = packer.createNestedObject();
+                for (auto& val : obj)
+                {
+                    // allocate the memory for the document
+                    // create an empty array
+                    StaticJsonDocument<128> doc;
+                    JsonArray array = doc.to<JsonArray>();
+                    
+                    pack_messagepack(val.second, array);
+
+                    nobj[val.first] = array.getElement(0);
+                }
+                return;
+            }
+            case signalr::value_type::binary:
+            {
+                size_t l = v.as_binary().size();
+                std::vector<uint8_t> bin = v.as_binary();
+                uint8_t buffer[5];
+
+                if(l < 256) {
+                    buffer[0] = 0xc4;
+                    buffer[1] = static_cast<uint8_t>(l);
+                    bin.insert(bin.begin(), buffer, buffer + 2);
+                } else if(l < 65536) {
+                    buffer[0] = 0xc5;
+                    auto val = uint16_t(l);
+                    ARDUINOJSON_NAMESPACE::fixEndianess(val);
+                    auto b = reinterpret_cast<uint8_t*>(&val);
+                    bin.insert(bin.begin(), buffer, buffer + 3);
+                } else {
+                    buffer[0] = 0xc6;
+                    auto val = uint32_t(l);
+                    ARDUINOJSON_NAMESPACE::fixEndianess(val);
+                    auto b = reinterpret_cast<uint8_t*>(&val);
+                    bin.insert(bin.begin(), buffer, buffer + 5);
+                }
                 
-                pack_messagepack(val.second, array);
-
-                nobj[val.first] = array.getElement(0);
+                auto value = serialized(reinterpret_cast<char*>(bin.data()), bin.size());
+                packer.add(value);            
+                return;
             }
-            return;
-        }
-        case signalr::value_type::binary:
-        {
-            size_t l = v.as_binary().size();
-            std::vector<uint8_t> bin = v.as_binary();
-            uint8_t buffer[5];
-
-            if(l < 256) {
-                buffer[0] = 0xc4;
-                buffer[1] = static_cast<uint8_t>(l);
-                bin.insert(bin.begin(), buffer, buffer + 2);
-            } else if(l < 65536) {
-                buffer[0] = 0xc5;
-                auto val = uint16_t(l);
-                ARDUINOJSON_NAMESPACE::fixEndianess(val);
-                auto b = reinterpret_cast<uint8_t*>(&val);
-                bin.insert(bin.begin(), buffer, buffer + 3);
-            } else {
-                buffer[0] = 0xc6;
-                auto val = uint32_t(l);
-                ARDUINOJSON_NAMESPACE::fixEndianess(val);
-                auto b = reinterpret_cast<uint8_t*>(&val);
-                bin.insert(bin.begin(), buffer, buffer + 5);
+            case signalr::value_type::null:
+            default:
+            {
+                packer.add(nullptr);
+                return;
             }
-            
-            auto value = serialized(reinterpret_cast<char*>(bin.data()), bin.size());
-            packer.add(value);            
-            return;
-        }
-        case signalr::value_type::null:
-        default:
-        {
-            packer.add(nullptr);
-            return;
-        }
         }
     }
 

@@ -5,19 +5,16 @@
 #pragma once
 
 #include "signalrclient/signalr_value.h"
-#include <json/json.h>
 #include <memory>
+#include <ArduinoJson.h>
 
 namespace signalr
 {
     static constexpr char record_separator = '\x1e';
 
-    signalr::value createValue(const Json::Value& v);
+    signalr::value createValue(const JsonVariant& v);
 
-    Json::Value createJson(const signalr::value& v);
+    void createJson(const signalr::value& v, JsonArray& packer, bool firstLevel = false);
 
     std::string base64Encode(const std::vector<uint8_t>& data);
-
-    Json::StreamWriterBuilder getJsonWriter();
-    std::unique_ptr<Json::CharReader> getJsonReader();
 }
