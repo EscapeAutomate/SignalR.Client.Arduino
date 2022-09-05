@@ -14,6 +14,11 @@ namespace signalr
         {
             // We support payloads up to 2GB so the biggest number we support is 7fffffff which when encoded as
             // VarInt is 0xFF 0xFF 0xFF 0xFF 0x07 - hence the maximum length prefix is 5 bytes.
+            if (payload.length() > 4096)
+            {
+                throw signalr_exception("messages over 4Ko are not supported.");
+            }
+
             char buffer[5];
 
             size_t length = payload.length();
@@ -28,11 +33,6 @@ namespace signalr
                 }
                 length_num_bytes++;
             } while (length > 0 && length_num_bytes < 5);
-
-            if (length_num_bytes == 5 && buffer[4] != 0x07)
-            {
-                throw signalr_exception("messages over 2GB are not supported.");
-            }
 
             payload.insert(0, buffer, length_num_bytes);
         }
