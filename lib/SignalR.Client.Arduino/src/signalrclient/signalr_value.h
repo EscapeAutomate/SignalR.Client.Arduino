@@ -22,8 +22,7 @@ namespace signalr
         string,
         float64,
         null,
-        boolean,
-        binary
+        boolean
     };
 
     /**

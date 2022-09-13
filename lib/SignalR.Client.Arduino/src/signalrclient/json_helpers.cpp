@@ -209,12 +209,6 @@ namespace signalr
                 }
                 return;
             }
-            case signalr::value_type::binary:
-            {
-                const auto& binary = v.as_binary();
-                packer.add(base64Encode(binary));
-                return;
-            }
             case signalr::value_type::null:
             default:
             {
