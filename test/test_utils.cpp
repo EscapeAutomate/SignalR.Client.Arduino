@@ -2,9 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-#include "test_utils.h"
-#include "signalrclient/signalr_client_config.h"
 #include <algorithm>
+#include "test_utils.h"
 
 using namespace signalr;
 

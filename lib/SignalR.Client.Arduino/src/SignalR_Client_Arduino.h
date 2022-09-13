@@ -5,7 +5,7 @@
 #include <WebSocketsClient.h>
 #endif
 
-#include <signalrclient/hub_connection_builder.h>
+//#include <signalrclient/hub_connection_builder.h>
 
 //typedef std::function<void(ArduinoJson::DynamicJsonDocument* doc)> SignalRClientOnEvent;
 

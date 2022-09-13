@@ -1,1 +1,0 @@
-SignalR-Client-Cpp-0.1.0-alpha3
