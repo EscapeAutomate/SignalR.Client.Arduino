@@ -24,8 +24,6 @@ namespace signalr
             return "null";
         case signalr::value_type::boolean:
             return "boolean";
-        default:
-            return std::to_string((int)v);
         }
     }
 
