@@ -6,11 +6,129 @@
 */
 
 #include "SignalR_Client_Arduino.h"
+#include "HandshakeMessage.h"
 
 #if defined(ARDUINO)
 WebSocketsClient webSocket;
-#endif
 SignalRClientClass SignalRClient;
+
+void SignalRClientClass::WebSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
+	switch (type) {
+		
+	case WStype_DISCONNECTED:
+		Serial.printf("[WSc] Disconnected!\n");
+		break;
+
+	case WStype_CONNECTED:
+	{
+		Serial.printf("[WSc] Connected to url: %s\n", payload);
+
+		waitForHandshake = true;
+
+		HandshakeRequestMessage* handshakeRequestMessage = new HandshakeRequestMessage();
+		handshakeRequestMessage->version = 1;
+		handshakeRequestMessage->protocol = hub_protocol->name().c_str();
+
+		String str = handshakeRequestMessage->Serialize();
+		Serial.println("[SR] Sending handshake!");
+
+		webSocket.sendTXT(str);
+		break;
+	}
+
+	case WStype_TEXT:
+	case WStype_BIN:
+	{
+		if (waitForHandshake)
+		{
+			waitForHandshake = false;
+
+			if (payload[length - 1] != 0x1E)
+			{
+				//bad handshake
+				webSocket.disconnect();
+				return;
+			}
+			
+			HandshakeResponseMessage handshakeResponseMessage;
+			handshakeResponseMessage.Deserialize(payload, length);
+
+			if (strlen(handshakeResponseMessage.error) != 0)
+			{
+				Serial.print("[SR] Received handshake with error: ");
+				Serial.println(handshakeResponseMessage.error);
+				webSocket.disconnect();
+				return;
+			}
+
+			Serial.println("[SR] Received handshake");
+			return;
+		}
+		else
+		{
+			auto str = std::string((char*)payload);
+			auto messages = hub_protocol->parse_messages(str);
+		}
+
+		break;
+	}
+		
+	case WStype_PING:
+	case WStype_PONG:
+	case WStype_ERROR:
+	case WStype_FRAGMENT_TEXT_START:
+	case WStype_FRAGMENT_BIN_START:
+	case WStype_FRAGMENT:
+	case WStype_FRAGMENT_FIN:
+		break;
+	}
+}
+
+void SignalRClientClass::Setup(const String& address, uint16_t port, const String& path, bool useMsgPack, const String& username, const String& password)
+{
+	if (webSocket.isConnected())
+	{
+		webSocket.disconnect();
+	}
+
+	webSocket.begin(address, port, path);
+
+	webSocket.onEvent(std::bind(&SignalRClientClass::WebSocketEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+
+	if (!username.isEmpty())
+	{
+		// use HTTP Basic Authorization this is optional remove if not needed
+		webSocket.setAuthorization(username.c_str(), password.c_str());
+	}
+
+	webSocket.setReconnectInterval(5000);
+
+	if (useMsgPack)
+        {
+            hub_protocol = new signalr::messagepack_hub_protocol();
+        }
+        else
+        {
+            hub_protocol = new signalr::json_hub_protocol();
+        }
+}
+
+void SignalRClientClass::On(const std::string& event_name, const std::function<void(const std::vector<signalr::value>&)>& handler)
+{
+	if (event_name.length() == 0)
+	{
+		throw std::invalid_argument("event_name cannot be empty");
+	}
+
+	if (m_subscriptions.find(event_name) != m_subscriptions.end())
+	{
+		throw signalr::signalr_exception("an action for this event has already been registered. event name: " + event_name);
+	}
+
+	m_subscriptions.insert({event_name, handler});
+}
+
+#endif
 
 /*void SignalRClientClass::WebSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 	switch (type) {
