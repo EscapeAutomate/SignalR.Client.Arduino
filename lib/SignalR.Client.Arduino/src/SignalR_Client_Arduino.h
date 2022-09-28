@@ -2,20 +2,14 @@
 #define _SignalR_h
 
 #if defined(ARDUINO)
-#include <unordered_map>
 #include <WebSocketsClient.h>
-#include "signalrclient/hub_protocol.h"
-#include "signalrclient/messagepack_hub_protocol.h"
-#include "signalrclient/json_hub_protocol.h"
-#include "signalrclient/case_insensitive_comparison_utils.h"
-#include "signalrclient/signalr_exception.h"
+#include "SignalRHub.h"
 
 class SignalRClientClass
 {
 private:
 	bool waitForHandshake = false;
-	signalr::hub_protocol* hub_protocol;
-	std::unordered_map<std::string, std::function<void(const std::vector<signalr::value>&)>, signalr::case_insensitive_hash, signalr::case_insensitive_equals> m_subscriptions;
+	SignalRHub* hub;
 
 	void WebSocketEvent(WStype_t type, uint8_t* payload, size_t length);
 
