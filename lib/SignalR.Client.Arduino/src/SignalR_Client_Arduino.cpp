@@ -1,10 +1,3 @@
-/*
- Name:		SignalR.cpp
- Created:	8/23/2022 6:35:26 PM
- Author:	lione
- Editor:	http://www.visualmicro.com
-*/
-
 #include "SignalR_Client_Arduino.h"
 
 #if defined(ARDUINO)
@@ -27,7 +20,7 @@ void SignalRClientClass::WebSocketEvent(WStype_t type, uint8_t* payload, size_t 
 
 		HandshakeRequestMessage* handshakeRequestMessage = new HandshakeRequestMessage();
 		handshakeRequestMessage->version = 1;
-		handshakeRequestMessage->protocol = hub_protocol->name().c_str();
+		handshakeRequestMessage->protocol = hub->name().c_str();
 
 		String str = handshakeRequestMessage->Serialize();
 		Serial.println("[SR] Sending handshake!");
@@ -66,8 +59,7 @@ void SignalRClientClass::WebSocketEvent(WStype_t type, uint8_t* payload, size_t 
 		}
 		else
 		{
-			auto str = std::string((char*)payload);
-			auto messages = hub_protocol->parse_messages(str);
+			hub->HandleMessage((char*)payload);
 		}
 
 		break;
@@ -102,30 +94,19 @@ void SignalRClientClass::Setup(const String& address, uint16_t port, const Strin
 	}
 
 	webSocket.setReconnectInterval(5000);
-
-	if (useMsgPack)
-        {
-            hub_protocol = new signalr::messagepack_hub_protocol();
-        }
-        else
-        {
-            hub_protocol = new signalr::json_hub_protocol();
-        }
+	
+	hub = new SignalRHub();
+	hub->Setup(useMsgPack);
 }
 
 void SignalRClientClass::On(const std::string& event_name, const std::function<void(const std::vector<signalr::value>&)>& handler)
 {
-	if (event_name.length() == 0)
-	{
-		throw std::invalid_argument("event_name cannot be empty");
-	}
+	hub->On(event_name, handler);
+}
 
-	if (m_subscriptions.find(event_name) != m_subscriptions.end())
-	{
-		throw signalr::signalr_exception("an action for this event has already been registered. event name: " + event_name);
-	}
-
-	m_subscriptions.insert({event_name, handler});
+void SignalRClientClass::Loop()
+{
+	webSocket.loop();
 }
 
 #endif
