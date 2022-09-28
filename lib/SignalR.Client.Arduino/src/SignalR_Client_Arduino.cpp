@@ -6,9 +6,9 @@
 */
 
 #include "SignalR_Client_Arduino.h"
-#include "HandshakeMessage.h"
 
 #if defined(ARDUINO)
+#include "HandshakeMessage.h"
 WebSocketsClient webSocket;
 SignalRClientClass SignalRClient;
 
