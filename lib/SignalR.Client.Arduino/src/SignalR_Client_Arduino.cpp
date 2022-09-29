@@ -1,80 +1,9 @@
 #include "SignalR_Client_Arduino.h"
 
-#if defined(ARDUINO)
 #include "HandshakeMessage.h"
-WebSocketsClient webSocket;
 SignalRClientClass SignalRClient;
 
-void SignalRClientClass::WebSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
-	switch (type) {
-		
-	case WStype_DISCONNECTED:
-		Serial.printf("[WSc] Disconnected!\n");
-		break;
 
-	case WStype_CONNECTED:
-	{
-		Serial.printf("[WSc] Connected to url: %s\n", payload);
-
-		waitForHandshake = true;
-
-		HandshakeRequestMessage* handshakeRequestMessage = new HandshakeRequestMessage();
-		handshakeRequestMessage->version = 1;
-		handshakeRequestMessage->protocol = hub->name().c_str();
-
-		String str = handshakeRequestMessage->Serialize();
-		Serial.println("[SR] Sending handshake!");
-
-		webSocket.sendTXT(str);
-		break;
-	}
-
-	case WStype_TEXT:
-	case WStype_BIN:
-	{
-		if (waitForHandshake)
-		{
-			waitForHandshake = false;
-
-			if (payload[length - 1] != 0x1E)
-			{
-				//bad handshake
-				webSocket.disconnect();
-				return;
-			}
-			
-			HandshakeResponseMessage handshakeResponseMessage;
-			handshakeResponseMessage.Deserialize(payload, length);
-
-			if (strlen(handshakeResponseMessage.error) != 0)
-			{
-				Serial.print("[SR] Received handshake with error: ");
-				Serial.println(handshakeResponseMessage.error);
-				webSocket.disconnect();
-				return;
-			}
-
-			Serial.println("[SR] Received handshake");
-			return;
-		}
-		else
-		{
-			hub->HandleMessage((char*)payload);
-		}
-
-		break;
-	}
-		
-	case WStype_PING:
-	case WStype_PONG:
-	case WStype_ERROR:
-	case WStype_FRAGMENT_TEXT_START:
-	case WStype_FRAGMENT_BIN_START:
-	case WStype_FRAGMENT:
-	case WStype_FRAGMENT_FIN:
-		break;
-	}
-}
 
 void SignalRClientClass::Setup(const String& address, uint16_t port, const String& path, bool useMsgPack, const String& username, const String& password)
 {
@@ -108,8 +37,6 @@ void SignalRClientClass::Loop()
 {
 	webSocket.loop();
 }
-
-#endif
 
 /*void SignalRClientClass::WebSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 	switch (type) {

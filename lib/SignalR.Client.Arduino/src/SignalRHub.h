@@ -4,6 +4,7 @@
 #include "signalrclient/case_insensitive_comparison_utils.h"
 #include "signalrclient/signalr_exception.h"
 #include "signalrclient/callback_manager.h"
+#include "signalrclient/hub_exception.h"
 
 #include <unordered_map>
 #include <functional>

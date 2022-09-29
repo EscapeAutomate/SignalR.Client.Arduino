@@ -81,16 +81,16 @@ void SignalRHub::On(const std::string& event_name, const std::function<void(cons
 void SignalRHub::Invoke(const std::string& method_name, const std::vector<signalr::value>& arguments, std::function<void(const signalr::value&, std::exception_ptr)> callback) noexcept
 {
     const auto& callback_id = m_callback_manager.register_callback(
-        create_hub_invocation_callback(m_logger, [callback](const signalr::value& result) { callback(result, nullptr); },
+        create_hub_invocation_callback([callback](const signalr::value& result) { callback(result, nullptr); },
             [callback](const std::exception_ptr e) { callback(signalr::value(), e); }));
 
-    invoke_hub_method(method_name, arguments, callback_id, nullptr,
+    Invoke_hub_method(method_name, arguments, callback_id, nullptr,
         [callback](const std::exception_ptr e){ callback(signalr::value(), e); });
 }
 
 void SignalRHub::Send(const std::string& method_name, const std::vector<signalr::value>& arguments, std::function<void(std::exception_ptr)> callback) noexcept
 {
-    invoke_hub_method(method_name, arguments, "",
+    Invoke_hub_method(method_name, arguments, "",
         [callback]() { callback(nullptr); },
         [callback](const std::exception_ptr e){ callback(e); });
 }
@@ -100,13 +100,13 @@ void SignalRHub::Invoke_hub_method(const std::string& method_name, const std::ve
 {
     try
     {
-        invocation_message invocation(callback_id, method_name, arguments);
-        auto message = m_protocol->write_message(&invocation);
+        signalr::invocation_message invocation(callback_id, method_name, arguments);
+        auto message = hub_protocol->write_message(&invocation);
 
         // weak_ptr prevents a circular dependency leading to memory leak and other problems
         auto weak_hub_connection = std::weak_ptr<hub_connection_impl>(shared_from_this());
 
-        m_connection->send(message, m_protocol->transfer_format(), [set_completion, set_exception, weak_hub_connection, callback_id](std::exception_ptr exception)
+        m_connection->send(message, hub_protocol->transfer_format(), [set_completion, set_exception, weak_hub_connection, callback_id](std::exception_ptr exception)
             {
                 if (exception)
                 {
@@ -127,15 +127,15 @@ void SignalRHub::Invoke_hub_method(const std::string& method_name, const std::ve
                 }
             });
 
-        reset_send_ping();
+        //reset_send_ping();
     }
     catch (const std::exception& e)
     {
         m_callback_manager.remove_callback(callback_id);
-        if (m_logger.is_enabled(trace_level::warning))
+        /*if (m_logger.is_enabled(trace_level::warning))
         {
             m_logger.log(trace_level::warning, std::string("failed to send invocation: ").append(e.what()));
-        }
+        }*/
         set_exception(std::current_exception());
     }
 }
@@ -148,7 +148,7 @@ static std::function<void(const char* error, const signalr::value&)> create_hub_
     {
         if (error != nullptr)
         {
-            set_exception(std::make_exception_ptr(hub_exception(error)));
+            set_exception(std::make_exception_ptr(signalr::hub_exception(error)));
         }
         else
         {
