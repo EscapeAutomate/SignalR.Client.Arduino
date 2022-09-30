@@ -5,12 +5,10 @@
 class websocket_transport : public transport
 {
 public:
-    websocket_transport(const websocket_transport&) = delete;
+    websocket_transport();
 
-    websocket_transport& operator=(const websocket_transport&) = delete;
-
-    /*void start(const std::string& url, std::function<void(std::exception_ptr)> callback) noexcept override;
-    void stop(std::function<void(std::exception_ptr)> callback) noexcept override;*/
+    void start(const std::string& url, std::function<void(std::exception_ptr)> callback) noexcept override;
+    void stop(std::function<void(std::exception_ptr)> callback) noexcept override;
     void on_close(std::function<void(std::exception_ptr)> callback) override;
 
     void send(const std::string& payload, signalr::transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept override;
@@ -18,7 +16,6 @@ public:
     void on_receive(std::function<void(std::string&&, std::exception_ptr)>) override;
 
 private:
-    websocket_transport();
 
     void WebSocketEvent(WStype_t type, uint8_t* payload, size_t length);
 

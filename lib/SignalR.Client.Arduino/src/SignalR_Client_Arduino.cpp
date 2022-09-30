@@ -5,7 +5,8 @@ SignalRClientClass SignalRClient;
 
 
 
-void SignalRClientClass::Setup(const String& address, uint16_t port, const String& path, bool useMsgPack, const String& username, const String& password)
+void SignalRClientClass::Setup(const String& address, uint16_t port, const String& path, bool useMsgPack, const String& username, const String& password,
+	signalr::log_writer* logger, signalr::trace_level logLevel)
 {
 	if (webSocket.isConnected())
 	{
@@ -24,7 +25,7 @@ void SignalRClientClass::Setup(const String& address, uint16_t port, const Strin
 
 	webSocket.setReconnectInterval(5000);
 	
-	hub = new SignalRHub();
+	hub = new SignalRHub(logger, logLevel);
 	hub->Setup(useMsgPack);
 }
 
