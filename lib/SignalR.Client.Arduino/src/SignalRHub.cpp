@@ -1,6 +1,6 @@
 #include "SignalRHub.h"
 
-SignalRHub::SignalRHub() : m_callback_manager("connection went out of scope before invocation result was received")
+SignalRHub::SignalRHub(signalr::log_writer* logger, signalr::trace_level logLevel) : m_callback_manager("connection went out of scope before invocation result was received")
 {
 }
 
@@ -14,6 +14,209 @@ void SignalRHub::Setup(bool useMsgPack)
 	{
 		hub_protocol = new signalr::json_hub_protocol();
 	}
+}
+
+void SignalRHub::Start(std::function<void(std::exception_ptr)> callback) noexcept
+{
+    if (m_connection->get_connection_state() != connection_state::disconnected)
+    {
+        callback(std::make_exception_ptr(signalr_exception(
+            "the connection can only be started if it is in the disconnected state")));
+        return;
+    }
+
+    m_connection->set_client_config(m_signalr_client_config);
+    m_handshakeTask = std::make_shared<completion_event>();
+    m_disconnect_cts = std::make_shared<cancellation_token_source>();
+    m_handshakeReceived = false;
+    std::weak_ptr<hub_connection_impl> weak_connection = shared_from_this();
+    m_connection->start([weak_connection, callback](std::exception_ptr start_exception)
+        {
+            auto connection = weak_connection.lock();
+            if (!connection)
+            {
+                // The connection has been destructed
+                callback(std::make_exception_ptr(signalr_exception("the hub connection has been deconstructed")));
+                return;
+            }
+
+            if (start_exception)
+            {
+                assert(connection->get_connection_state() == connection_state::disconnected);
+                // connection didn't start, don't call stop
+                callback(start_exception);
+                return;
+            }
+
+            std::shared_ptr<std::mutex> handshake_request_lock = std::make_shared<std::mutex>();
+            std::shared_ptr<bool> handshake_request_done = std::make_shared<bool>();
+
+            auto handle_handshake = [weak_connection, handshake_request_done, handshake_request_lock, callback](std::exception_ptr exception, bool fromSend)
+            {
+                assert(fromSend ? *handshake_request_done : true);
+
+                auto connection = weak_connection.lock();
+                if (!connection)
+                {
+                    // The connection has been destructed
+                    callback(std::make_exception_ptr(signalr_exception("the hub connection has been deconstructed")));
+                    return;
+                }
+
+                {
+                    std::lock_guard<std::mutex> lock(*handshake_request_lock);
+                    // connection.send will be waiting on the handshake task which has been set by the caller already
+                    if (!fromSend && *handshake_request_done == true)
+                    {
+                        return;
+                    }
+                    *handshake_request_done = true;
+                }
+
+                try
+                {
+                    if (exception == nullptr)
+                    {
+                        connection->m_handshakeTask->get();
+                        callback(nullptr);
+                    }
+                }
+                catch (...)
+                {
+                    exception = std::current_exception();
+                }
+
+                if (exception != nullptr)
+                {
+                    connection->m_connection->stop([callback, exception](std::exception_ptr)
+                        {
+                            callback(exception);
+                        }, exception);
+                }
+                else
+                {
+                    connection->start_keepalive();
+                }
+            };
+
+            auto handshake_request = handshake::write_handshake(connection->m_protocol);
+            auto handshake_task = connection->m_handshakeTask;
+            auto handshake_timeout = connection->m_signalr_client_config.get_handshake_timeout();
+
+            connection->m_disconnect_cts->register_callback([handle_handshake, handshake_request_lock, handshake_request_done]()
+                {
+                    {
+                        std::lock_guard<std::mutex> lock(*handshake_request_lock);
+                        // no op after connection.send returned, m_handshakeTask should be set before m_disconnect_cts is canceled
+                        if (*handshake_request_done == true)
+                        {
+                            return;
+                        }
+                    }
+
+                    // if the request isn't completed then no one is waiting on the handshake task
+                    // so we need to run the callback here instead of relying on connection.send completing
+                    // handshake_request_done is set in handle_handshake, don't set it here
+                    handle_handshake(nullptr, false);
+                });
+
+            timer(connection->m_signalr_client_config.get_scheduler(),
+                [handle_handshake, handshake_task, handshake_timeout, handshake_request_lock](std::chrono::milliseconds duration)
+                {
+                    {
+                        std::lock_guard<std::mutex> lock(*handshake_request_lock);
+
+                        // if the task is set then connection.send is either already waiting on the handshake or has completed,
+                        // or stop has been called and will be handling the callback
+                        if (handshake_task->is_set())
+                        {
+                            return true;
+                        }
+
+                        if (duration < handshake_timeout)
+                        {
+                            return false;
+                        }
+                    }
+
+                    auto exception = std::make_exception_ptr(signalr_exception("timed out waiting for the server to respond to the handshake message."));
+                    // unblocks connection.send if it's waiting on the task
+                    handshake_task->set(exception);
+
+                    handle_handshake(exception, false);
+                    return true;
+                });
+
+            connection->m_connection->send(handshake_request, connection->m_protocol->transfer_format(),
+                [handle_handshake, handshake_request_done, handshake_request_lock](std::exception_ptr exception)
+            {
+                {
+                    std::lock_guard<std::mutex> lock(*handshake_request_lock);
+                    if (*handshake_request_done == true)
+                    {
+                        // callback ran from timer or cancellation token, nothing to do here
+                        return;
+                    }
+
+                    // indicates that the handshake timer doesn't need to call the callback, it just needs to set the timeout exception
+                    // handle_handshake will be waiting on the handshake completion (error or success) to call the callback
+                    *handshake_request_done = true;
+                }
+
+                handle_handshake(exception, true);
+            });
+        });
+}
+
+void SignalRHub::Stop(std::function<void(std::exception_ptr)> callback) noexcept
+{
+    if (get_connection_state() == connection_state::disconnected)
+    {
+        m_logger.log(trace_level::info, "Stop ignored because the connection is already disconnected.");
+        callback(nullptr);
+        return;
+    }
+    else
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_stop_callback_lock);
+            m_stop_callbacks.push_back(callback);
+
+            if (m_stop_callbacks.size() > 1)
+            {
+                m_logger.log(trace_level::info, "Stop is already in progress, waiting for it to finish.");
+                // we already registered the callback
+                // so we can just return now as the in-progress stop will trigger the callback when it completes
+                return;
+            }
+        }
+        std::weak_ptr<hub_connection_impl> weak_connection = shared_from_this();
+        m_connection->stop([weak_connection](std::exception_ptr exception)
+            {
+                auto connection = weak_connection.lock();
+                if (!connection)
+                {
+                    return;
+                }
+
+                assert(connection->get_connection_state() == connection_state::disconnected);
+
+                std::vector<std::function<void(std::exception_ptr)>> callbacks;
+
+                {
+                    std::lock_guard<std::mutex> lock(connection->m_stop_callback_lock);
+                    // copy the callbacks out and clear the list inside the lock
+                    // then run the callbacks outside of the lock
+                    callbacks = connection->m_stop_callbacks;
+                    connection->m_stop_callbacks.clear();
+                }
+
+                for (auto& callback : callbacks)
+                {
+                    callback(exception);
+                }
+            }, nullptr);
+    }
 }
 
 void SignalRHub::HandleMessage(const std::string& message)
