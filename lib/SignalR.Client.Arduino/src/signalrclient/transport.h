@@ -12,7 +12,6 @@ class transport
 public:
     virtual void start(const std::string& url, std::function<void(std::exception_ptr)> callback) noexcept = 0;
     virtual void stop(std::function<void(std::exception_ptr)> callback) noexcept = 0;
-    virtual void on_close(std::function<void(std::exception_ptr)> callback) = 0;
 
     virtual void send(const std::string& payload, signalr::transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept = 0;
 

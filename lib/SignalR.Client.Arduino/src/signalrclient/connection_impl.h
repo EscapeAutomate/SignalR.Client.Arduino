@@ -41,11 +41,11 @@ namespace signalr
         std::string m_connection_id;
         std::string m_connection_token;
 
-        void start_transport(const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> callback);
+        void start_transport(const std::string& url);
         void send_connect_request(const std::shared_ptr<transport>& transport,
             const std::string& url, std::function<void(std::exception_ptr)> callback);
         void start_negotiate(const std::string& url, std::function<void(std::exception_ptr)> callback);
-        void start_negotiate_internal(const std::string& url, int redirect_count, std::function<void(std::shared_ptr<transport> transport, std::exception_ptr)> callback);
+        void start_negotiate_internal(const std::string& url, int redirect_count);
 
         void process_response(std::string&& response);
 
