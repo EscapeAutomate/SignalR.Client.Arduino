@@ -24,11 +24,13 @@ namespace signalr
         void send(const std::string &data, transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept;
         void stop(std::function<void(std::exception_ptr)> callback, std::exception_ptr exception) noexcept;
 
+        connection_state get_connection_state() const noexcept;
         void set_message_received(const std::function<void(std::string&&)>& message_received);
         void set_disconnected(const std::function<void(std::exception_ptr)>& disconnected);
 
     private:
         std::string m_base_url;
+        std::atomic<connection_state> m_connection_state;
         logger m_logger;
         transport* m_transport;
         bool m_skip_negotiation;

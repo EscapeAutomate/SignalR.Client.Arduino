@@ -9,6 +9,8 @@
 
 namespace signalr
 {
+    char record_separator = '\x1e';
+    
     signalr::value createValue(const JsonVariant& v)
     {        
         if(v.is<bool>())
