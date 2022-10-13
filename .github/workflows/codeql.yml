@@ -78,7 +78,7 @@ jobs:
       run: pio run --environment native
       
     - name: Create base coverage
-      run: lcov -c -i -d . -o coverage_base.info
+      run: lcov -c --no-external -i -d . -o coverage_base.info
 
     - name: Run Test
       run: pio test --environment native      
