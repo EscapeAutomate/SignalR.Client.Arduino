@@ -18,7 +18,7 @@ namespace signalr
     class connection_impl
     {
     public:
-        connection_impl(const std::string& url, trace_level trace_level, const log_writer& log_writer, bool skip_negotiation);
+        connection_impl(const std::string& url, trace_level trace_level, log_writer* log_writer, bool skip_negotiation);
 
         void start(std::function<void(std::exception_ptr)> callback) noexcept;
         void send(const std::string &data, transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept;

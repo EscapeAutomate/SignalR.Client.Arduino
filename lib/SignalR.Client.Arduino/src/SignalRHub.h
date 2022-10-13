@@ -20,7 +20,7 @@ private:
 	std::unordered_map<std::string, std::function<void(const std::vector<value>&)>, case_insensitive_hash, case_insensitive_equals> m_subscriptions;
 	hub_protocol* m_hub_protocol;
     callback_manager m_callback_manager;
-    log_writer* m_logger;
+    log_writer* m_log_writer;
     logger m_logger;
     trace_level m_log_level;
     connection_impl m_connection;
@@ -30,7 +30,7 @@ private:
     const std::string& callback_id, std::function<void()> set_completion, std::function<void(const std::exception_ptr)> set_exception) noexcept;
 
 public:
-    SignalRHub(const std::string& url, trace_level trace_level, const log_writer& log_writer, bool skip_negotiation);
+    SignalRHub(const std::string& url, trace_level trace_level, log_writer* log_writer, bool skip_negotiation);
 	void Setup(bool useMsgPack);
 	void HandleMessage(const std::string& message);
     void On(const std::string& event_name, const std::function<void(const std::vector<value>&)>& handler);
@@ -42,6 +42,6 @@ public:
 
     const std::string& name() const
     {
-        return hub_protocol->name();
+        return m_hub_protocol->name();
     }
 };

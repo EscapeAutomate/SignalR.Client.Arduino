@@ -13,7 +13,7 @@ namespace signalr
     class logger
     {
     public:
-        logger(const log_writer& log_writer, trace_level trace_level) noexcept;
+        logger(log_writer* log_writer, trace_level trace_level) noexcept;
 
         void log(trace_level level, const char* entry, size_t entry_count) const;
 

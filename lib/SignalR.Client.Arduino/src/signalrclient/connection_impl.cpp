@@ -6,11 +6,12 @@
 #include "signalrclient/connection_impl.h"
 #include "signalrclient/signalr_exception.h"
 #include "case_insensitive_comparison_utils.h"
+#include "signalrclient/websocket_transport.h"
 #include <assert.h>
 
 namespace signalr
 {
-    connection_impl::connection_impl(const std::string& url, trace_level trace_level, const log_writer& log_writer, bool skip_negotiation)
+    connection_impl::connection_impl(const std::string& url, trace_level trace_level, log_writer* log_writer, bool skip_negotiation)
         : m_base_url(url), m_logger(log_writer, trace_level), m_transport(new websocket_transport()), m_skip_negotiation(skip_negotiation),
         m_message_received([](const std::string&) noexcept {}), m_disconnected([](std::exception_ptr) noexcept {})
     {

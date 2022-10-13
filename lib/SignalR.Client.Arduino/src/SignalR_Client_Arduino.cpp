@@ -1,9 +1,6 @@
-#include "SignalR_Client_Arduino.h"
+/*#include "SignalR_Client_Arduino.h"
 
-#include "HandshakeMessage.h"
 SignalRClientClass SignalRClient;
-
-
 
 void SignalRClientClass::Setup(const String& address, uint16_t port, const String& path, bool useMsgPack, const String& username, const String& password,
 	signalr::log_writer* logger, signalr::trace_level logLevel)
@@ -37,7 +34,7 @@ void SignalRClientClass::On(const std::string& event_name, const std::function<v
 void SignalRClientClass::Loop()
 {
 	webSocket.loop();
-}
+}*/
 
 /*void SignalRClientClass::WebSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 	switch (type) {

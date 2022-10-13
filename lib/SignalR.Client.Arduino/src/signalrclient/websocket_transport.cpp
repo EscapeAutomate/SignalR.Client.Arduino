@@ -1,5 +1,6 @@
-#if defined(ARDUINO)
 #include "signalrclient/websocket_transport.h"
+
+#if defined(ARDUINO)
 
 websocket_transport::websocket_transport() : transport()
 {
@@ -75,6 +76,24 @@ void websocket_transport::WebSocketEvent(WStype_t type, uint8_t* payload, size_t
 	case WStype_FRAGMENT_FIN:
 		break;
 	}
+}
+
+void websocket_transport::on_receive(std::function<void(std::string&&, std::exception_ptr)> callback)
+{
+    m_process_response_callback = callback;
+}
+
+void websocket_transport::send(const std::string& payload, signalr::transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept
+{
+    //TODO send
+}
+#else
+websocket_transport::websocket_transport() : transport()
+{
+    
+}
+
+void websocket_transport::WebSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 }
 
 void websocket_transport::on_receive(std::function<void(std::string&&, std::exception_ptr)> callback)

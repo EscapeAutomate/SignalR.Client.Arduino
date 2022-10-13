@@ -1,7 +1,15 @@
 #include "SignalRHub.h"
 #include "signalrclient/handshake_protocol.h"
 
-SignalRHub::SignalRHub(const std::string& url, trace_level trace_level, const log_writer& log_writer, bool skip_negotiation) :
+// unnamed namespace makes it invisble outside this translation unit
+namespace
+{
+    static std::function<void(const char*, const signalr::value&)> create_hub_invocation_callback(
+        const std::function<void(const signalr::value&)>& set_result,
+        const std::function<void(const std::exception_ptr e)>& set_exception);
+}
+
+SignalRHub::SignalRHub(const std::string& url, trace_level trace_level, log_writer* log_writer, bool skip_negotiation) :
     m_callback_manager("connection went out of scope before invocation result was received"),
     m_connection(url, trace_level, log_writer, skip_negotiation),
     m_logger(log_writer, trace_level)
@@ -41,9 +49,7 @@ void SignalRHub::Start(std::function<void(std::exception_ptr)> callback) noexcep
 
             if (start_exception)
             {
-                if(connection->get_connection_state() == connection_state::disconnected)
-                    // connection didn't start, don't call stop
-                    callback(start_exception);
+                callback(start_exception);
                 return;
             }
 
@@ -70,42 +76,13 @@ void SignalRHub::Stop(std::function<void(std::exception_ptr)> callback) noexcept
     }
     else
     {
-        {
-            std::lock_guard<std::mutex> lock(m_stop_callback_lock);
-            m_stop_callbacks.push_back(callback);
-
-            if (m_stop_callbacks.size() > 1)
+        connection_impl* weak_connection = &m_connection;
+        m_connection.stop([weak_connection, callback](std::exception_ptr exception)
             {
-                m_logger.log(trace_level::info, "Stop is already in progress, waiting for it to finish.");
-                // we already registered the callback
-                // so we can just return now as the in-progress stop will trigger the callback when it completes
-                return;
-            }
-        }
-        std::weak_ptr<hub_connection_impl> weak_connection = shared_from_this();
-        m_connection.stop([weak_connection](std::exception_ptr exception)
-            {
-                auto connection = weak_connection.lock();
-                if (!connection)
-                {
-                    return;
-                }
-
-                assert(connection->get_connection_state() == connection_state::disconnected);
-
-                std::vector<std::function<void(std::exception_ptr)>> callbacks;
-
-                {
-                    std::lock_guard<std::mutex> lock(connection->m_stop_callback_lock);
-                    // copy the callbacks out and clear the list inside the lock
-                    // then run the callbacks outside of the lock
-                    callbacks = connection->m_stop_callbacks;
-                    connection->m_stop_callbacks.clear();
-                }
-
-                for (auto& callback : callbacks)
+                if (exception)
                 {
                     callback(exception);
+                    return;
                 }
             }, nullptr);
     }
@@ -113,13 +90,14 @@ void SignalRHub::Stop(std::function<void(std::exception_ptr)> callback) noexcept
 
 void SignalRHub::HandleMessage(const std::string& message)
 {
-    auto messages = hub_protocol->parse_messages(message);
+    auto messages = m_hub_protocol->parse_messages(message);
 
     for (auto &msg : messages)
     {
         switch (msg->message_type)
         {
         case message_type::invocation:
+        {
             auto invocation = static_cast<invocation_message*>(msg.get());
             auto event = m_subscriptions.find(invocation->target);
             if (event != m_subscriptions.end())
@@ -132,6 +110,7 @@ void SignalRHub::HandleMessage(const std::string& message)
                 //m_logger.log(trace_level::info, "handler not found");
             }
             break;
+        }
         
         case message_type::completion:
             {
@@ -196,20 +175,14 @@ void SignalRHub::Invoke_hub_method(const std::string& method_name, const std::ve
     try
     {
         invocation_message invocation(callback_id, method_name, arguments);
-        auto message = hub_protocol->write_message(&invocation);
+        auto message = m_hub_protocol->write_message(&invocation);
+        callback_manager* callback_manager = &m_callback_manager;
 
-        // weak_ptr prevents a circular dependency leading to memory leak and other problems
-        auto weak_hub_connection = std::weak_ptr<hub_connection_impl>(shared_from_this());
-
-        m_connection->send(message, hub_protocol->transfer_format(), [set_completion, set_exception, weak_hub_connection, callback_id](std::exception_ptr exception)
+        m_connection.send(message, m_hub_protocol->transfer_format(), [set_completion, set_exception, callback_manager, callback_id](std::exception_ptr exception)
             {
                 if (exception)
                 {
-                    auto hub_connection = weak_hub_connection.lock();
-                    if (hub_connection)
-                    {
-                        hub_connection->m_callback_manager.remove_callback(callback_id);
-                    }
+                    callback_manager->remove_callback(callback_id);
                     set_exception(exception);
                 }
                 else
