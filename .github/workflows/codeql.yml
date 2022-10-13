@@ -73,9 +73,12 @@ jobs:
 
     - name: Build library
       run: pio run --environment esp32-s2-saola-1
+
+    - name: Build native library
+      run: pio run --environment native
       
     - name: Create base coverage
-      run: lcov -c --no-external -i -d . -o coverage_base.info
+      run: lcov -c -i -d . -o coverage_base.info
 
     - name: Run Test
       run: pio test --environment native      
