@@ -18,7 +18,7 @@ void websocket_transport::WebSocketEvent(WStype_t type, uint8_t* payload, size_t
 	{
 		Serial.printf("[WSc] Connected to url: %s\n", payload);
 
-		waitForHandshake = true;
+		/*waitForHandshake = true;
 
 		HandshakeRequestMessage* handshakeRequestMessage = new HandshakeRequestMessage();
 		handshakeRequestMessage->version = 1;
@@ -27,14 +27,14 @@ void websocket_transport::WebSocketEvent(WStype_t type, uint8_t* payload, size_t
 		String str = handshakeRequestMessage->Serialize();
 		Serial.println("[SR] Sending handshake!");
 
-		webSocket.sendTXT(str);
+		webSocket.sendTXT(str);*/
 		break;
 	}
 
 	case WStype_TEXT:
 	case WStype_BIN:
 	{
-		if (waitForHandshake)
+		/*if (waitForHandshake)
 		{
 			waitForHandshake = false;
 
@@ -62,7 +62,7 @@ void websocket_transport::WebSocketEvent(WStype_t type, uint8_t* payload, size_t
 		else
 		{
 			hub->HandleMessage((char*)payload);
-		}
+		}*/
 
 		break;
 	}
