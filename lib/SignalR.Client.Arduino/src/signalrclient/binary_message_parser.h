@@ -6,6 +6,8 @@
 
 #ifdef USE_MSGPACK
 
+using size_t = unsigned int;
+
 namespace signalr
 {
     namespace binary_message_parser
