@@ -5,7 +5,7 @@
 #include "stdafx.h"
 
 #ifdef USE_MSGPACK
-#include "messagepack_hub_protocol.h"
+#include "signalrclient/messagepack_hub_protocol.h"
 #include "test_utils.h"
 
 using namespace signalr;

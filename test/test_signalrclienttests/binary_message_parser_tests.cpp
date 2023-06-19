@@ -5,7 +5,7 @@
 #include "stdafx.h"
 
 #ifdef USE_MSGPACK
-#include "binary_message_parser.h"
+#include "signalrclient/binary_message_parser.h"
 #include <vector>
 #include <signalrclient/signalr_exception.h>
 
