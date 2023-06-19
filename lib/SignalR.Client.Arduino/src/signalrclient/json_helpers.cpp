@@ -2,50 +2,49 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#include "stdafx.h"
 #include "json_helpers.h"
 #include <cmath>
 #include <stdint.h>
-#include <ArduinoJson.h>
 
 namespace signalr
 {
     char record_separator = '\x1e';
-    
-    signalr::value createValue(const JsonVariant& v)
-    {        
-        if(v.is<bool>())
+
+    signalr::value createValue(const Json::Value& v)
+    {
+        switch (v.type())
         {
-            return signalr::value(v.as<bool>());
-        }
-        else if(v.is<double>())
+        case Json::ValueType::booleanValue:
+            return signalr::value(v.asBool());
+        case Json::ValueType::realValue:
+        case Json::ValueType::intValue:
+        case Json::ValueType::uintValue:
+            return signalr::value(v.asDouble());
+        case Json::ValueType::stringValue:
+            return signalr::value(v.asString());
+        case Json::ValueType::arrayValue:
         {
-            return signalr::value(v.as<double>());
-        }
-        else if(v.is<std::string>())
-        {
-            return signalr::value(v.as<std::string>());
-        }
-        else if(v.is<JsonArray>())
-        {
-            auto arr = v.as<JsonArray>();
             std::vector<signalr::value> vec;
-            for (JsonVariant ar : arr) {
-                vec.push_back(createValue(ar));
+            for (auto& val : v)
+            {
+                vec.push_back(createValue(val));
             }
             return signalr::value(std::move(vec));
         }
-        else if(v.is<JsonObject>())
+        case Json::ValueType::objectValue:
         {
-            auto obj = v.as<JsonObject>();
             std::map<std::string, signalr::value> map;
-            for (JsonPair p : obj) {
-                map.insert({ std::string(p.key().c_str()), createValue(p.value().as<JsonVariant>()) });
+            for (const auto& val : v.getMemberNames())
+            {
+                map.insert({ val, createValue(v[val]) });
             }
             return signalr::value(std::move(map));
         }
-        
-        // if(v.isNull())
-        return signalr::value();
+        case Json::ValueType::nullValue:
+        default:
+            return signalr::value();
+        }
     }
 
     char getBase64Value(uint32_t i)
@@ -110,113 +109,95 @@ namespace signalr
         return base64result;
     }
 
-    void createJson(const signalr::value& v, JsonArray& packer, bool firstLevel)
+    Json::Value createJson(const signalr::value& v)
     {
         switch (v.type())
         {
-            case signalr::value_type::boolean:
+        case signalr::value_type::boolean:
+            return Json::Value(v.as_bool());
+        case signalr::value_type::float64:
+        {
+            auto value = v.as_double();
+            double intPart;
+            // Workaround for 1.0 being output as 1.0 instead of 1
+            // because the server expects certain values to be 1 instead of 1.0 (like protocol version)
+            if (std::modf(value, &intPart) == 0)
             {
-                if (v.as_bool())
+                if (value < 0)
                 {
-                    packer.add(true);
-                }
-                else
-                {
-                    packer.add(false);
-                }
-                return;
-            }
-            case signalr::value_type::float64:
-            {
-                auto value = v.as_double();
-                double intPart;
-                // Workaround for 1.0 being output as 1.0 instead of 1
-                // because the server expects certain values to be 1 instead of 1.0 (like protocol version)
-                if (std::modf(value, &intPart) == 0)
-                {
-                    if (value < 0)
+                    if (value >= (double)INT64_MIN)
                     {
-                        if (value >= (double)INT64_MIN)
-                        {
-                            // Fits within int64_t
-                            packer.add(static_cast<int64_t>(intPart));
-                            return;
-                        }
-                        else
-                        {
-                            // Remain as double
-                            packer.add(value);
-                            return;
-                        }
+                        // Fits within int64_t
+                        return Json::Value(static_cast<int64_t>(intPart));
                     }
                     else
                     {
-                        if (value <= (double)UINT64_MAX)
-                        {
-                            // Fits within uint64_t
-                            packer.add(static_cast<uint64_t>(intPart));
-                            return;
-                        }
-                        else
-                        {
-                            // Remain as double
-                            packer.add(value);
-                            return;
-                        }
+                        // Remain as double
+                        return Json::Value(value);
                     }
                 }
-                packer.add(v.as_double());
-                return;
-            }
-            case signalr::value_type::string:
-            {
-                packer.add(v.as_string());
-                return;
-            }
-            case signalr::value_type::array:
-            {
-                const auto& array = v.as_array();
-                
-                if (firstLevel)
+                else
                 {
-                    for (auto& val : array)
+                    if (value <= (double)UINT64_MAX)
                     {
-                        createJson(val, packer);
+                        // Fits within uint64_t
+                        return Json::Value(static_cast<uint64_t>(intPart));
                     }
-                }
-                else  
-                {
-                    auto arr = packer.createNestedArray();
-                    for (auto& val : array)
+                    else
                     {
-                        createJson(val, arr);
+                        // Remain as double
+                        return Json::Value(value);
                     }
-                }                
-                return;
-            }
-            case signalr::value_type::map:
-            {
-                const auto& obj = v.as_map();
-                auto nobj = packer.createNestedObject();
-                for (auto& val : obj)
-                {
-                    // allocate the memory for the document
-                    // create an empty array
-                    StaticJsonDocument<128> doc;
-                    JsonArray array = doc.to<JsonArray>();
-                    
-                    createJson(val.second, array);
-
-                    nobj[val.first] = array.getElement(0);
                 }
-                return;
             }
-            case signalr::value_type::null:
-            default:
-            {
-                packer.add(nullptr);
-                return;
-            }
+            return Json::Value(v.as_double());
         }
+        case signalr::value_type::string:
+            return Json::Value(v.as_string());
+        case signalr::value_type::array:
+        {
+            const auto& array = v.as_array();
+            Json::Value vec(Json::ValueType::arrayValue);
+            for (auto& val : array)
+            {
+                vec.append(createJson(val));
+            }
+            return vec;
+        }
+        case signalr::value_type::map:
+        {
+            const auto& obj = v.as_map();
+            Json::Value object(Json::ValueType::objectValue);
+            for (auto& val : obj)
+            {
+                object[val.first] = createJson(val.second);
+            }
+            return object;
+        }
+        case signalr::value_type::binary:
+        {
+            const auto& binary = v.as_binary();
+            return Json::Value(base64Encode(binary));
+        }
+        case signalr::value_type::null:
+        default:
+            return Json::Value(Json::ValueType::nullValue);
+        }
+    }
+
+    Json::StreamWriterBuilder getJsonWriter()
+    {
+        auto writer = Json::StreamWriterBuilder();
+        writer["commentStyle"] = "None";
+        writer["indentation"] = "";
+        return writer;
+    }
+
+    std::unique_ptr<Json::CharReader> getJsonReader()
+    {
+        auto builder = Json::CharReaderBuilder();
+        Json::CharReaderBuilder::strictMode(&builder.settings_);
+        std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+        return reader;
     }
 }

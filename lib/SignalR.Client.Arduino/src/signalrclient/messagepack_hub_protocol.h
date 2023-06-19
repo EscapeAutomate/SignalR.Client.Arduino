@@ -4,7 +4,9 @@
 
 #pragma once
 
-#include "signalr_value.h"
+#ifdef USE_MSGPACK
+
+#include "signalrclient/signalr_value.h"
 #include "hub_protocol.h"
 
 namespace signalr
@@ -35,3 +37,5 @@ namespace signalr
         std::string m_protocol_name = "messagepack";
     };
 }
+
+#endif

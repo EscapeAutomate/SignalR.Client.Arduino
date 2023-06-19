@@ -2,8 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#include "stdafx.h"
 
-#include "signalrclient/binary_message_parser.h"
+#ifdef USE_MSGPACK
+#include "binary_message_parser.h"
 #include "signalrclient/signalr_exception.h"
 
 namespace signalr
@@ -63,3 +65,5 @@ namespace signalr
         }
     }
 }
+
+#endif

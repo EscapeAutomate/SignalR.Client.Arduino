@@ -1,60 +1,55 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
 #pragma once
 
-#include "signalrclient/transport.h"
+#include "transport.h"
+#include "logger.h"
+#include "signalrclient/websocket_client.h"
+#include "connection_impl.h"
 
-#if defined(ARDUINO)
-#include <WebSocketsClient.h>
-
-class websocket_transport : public transport
+namespace signalr
 {
-public:
-    websocket_transport();
+    class websocket_transport : public transport, public std::enable_shared_from_this<websocket_transport>
+    {
+    public:
+        static std::shared_ptr<transport> create(const std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)>& websocket_client_factory,
+            const signalr_client_config& signalr_client_config, const logger& logger);
 
-    void start(const std::string& url, std::function<void(std::exception_ptr)> callback) noexcept override;
-    void stop(std::function<void(std::exception_ptr)> callback) noexcept override;
+        ~websocket_transport();
 
-    void send(const std::string& payload, signalr::transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept override;
+        websocket_transport(const websocket_transport&) = delete;
 
-    void on_receive(std::function<void(std::string&&, std::exception_ptr)>) override;
+        websocket_transport& operator=(const websocket_transport&) = delete;
 
-private:
+        transport_type get_transport_type() const noexcept override;
 
-    void WebSocketEvent(WStype_t type, uint8_t* payload, size_t length);
+        void start(const std::string& url, std::function<void(std::exception_ptr)> callback) noexcept override;
+        void stop(std::function<void(std::exception_ptr)> callback) noexcept override;
+        void on_close(std::function<void(std::exception_ptr)> callback) override;
 
-    std::function<void(std::string, std::exception_ptr)> m_process_response_callback;
-    WebSocketsClient webSocket;
-};
-#else
-typedef enum {
-    WStype_ERROR,
-    WStype_DISCONNECTED,
-    WStype_CONNECTED,
-    WStype_TEXT,
-    WStype_BIN,
-    WStype_FRAGMENT_TEXT_START,
-    WStype_FRAGMENT_BIN_START,
-    WStype_FRAGMENT,
-    WStype_FRAGMENT_FIN,
-    WStype_PING,
-    WStype_PONG,
-} WStype_t;
+        void send(const std::string& payload, transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept override;
 
-class websocket_transport : public transport
-{
-public:
-    websocket_transport();
+        void on_receive(std::function<void(std::string&&, std::exception_ptr)>) override;
 
-    void start(const std::string& url, std::function<void(std::exception_ptr)> callback) noexcept override;
-    void stop(std::function<void(std::exception_ptr)> callback) noexcept override;
+    private:
+        websocket_transport(const std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)>& websocket_client_factory,
+            const signalr_client_config& signalr_client_config, const logger& logger);
 
-    void send(const std::string& payload, signalr::transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept override;
+        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> m_websocket_client_factory;
+        std::shared_ptr<websocket_client> m_websocket_client;
+        std::mutex m_websocket_client_lock;
+        std::mutex m_start_stop_lock;
+        std::function<void(std::string, std::exception_ptr)> m_process_response_callback;
+        std::function<void(std::exception_ptr)> m_close_callback;
+        signalr_client_config m_signalr_client_config;
 
-    void on_receive(std::function<void(std::string&&, std::exception_ptr)>) override;
+        bool m_disconnected;
+        std::shared_ptr<cancellation_token_source> m_receive_loop_task;
 
-private:
+        void receive_loop();
 
-    void WebSocketEvent(WStype_t type, uint8_t* payload, size_t length);
-
-    std::function<void(std::string, std::exception_ptr)> m_process_response_callback;
-};
-#endif
+        std::shared_ptr<websocket_client> safe_get_websocket_client();
+    };
+}

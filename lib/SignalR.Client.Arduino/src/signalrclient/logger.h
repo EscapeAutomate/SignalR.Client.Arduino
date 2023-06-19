@@ -13,7 +13,7 @@ namespace signalr
     class logger
     {
     public:
-        logger(log_writer* log_writer, trace_level trace_level) noexcept;
+        logger(const std::shared_ptr<log_writer>& log_writer, trace_level trace_level) noexcept;
 
         void log(trace_level level, const char* entry, size_t entry_count) const;
 
@@ -33,7 +33,7 @@ namespace signalr
         }
 
     private:
-        log_writer* m_log_writer;
+        std::shared_ptr<log_writer> m_log_writer;
         trace_level m_trace_level;
 
         static void write_trace_level(trace_level trace_level, std::ostream& stream);

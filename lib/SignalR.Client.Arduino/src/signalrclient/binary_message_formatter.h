@@ -4,6 +4,8 @@
 
 #pragma once
 
+#ifdef USE_MSGPACK
+
 #include <string>
 
 namespace signalr
@@ -13,3 +15,5 @@ namespace signalr
         void write_length_prefix(std::string &);
     }
 }
+
+#endif

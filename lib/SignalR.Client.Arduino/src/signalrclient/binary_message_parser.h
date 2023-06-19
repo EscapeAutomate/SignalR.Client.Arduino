@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <stddef.h>
+#ifdef USE_MSGPACK
 
 namespace signalr
 {
@@ -13,3 +13,5 @@ namespace signalr
         bool try_parse_message(const unsigned char* message, size_t length, size_t* length_prefix_length, size_t* length_of_message);
     }
 }
+
+#endif

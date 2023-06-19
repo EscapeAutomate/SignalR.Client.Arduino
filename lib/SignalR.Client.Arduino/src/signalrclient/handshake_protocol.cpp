@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#include "stdafx.h"
 #include "handshake_protocol.h"
 #include "json_helpers.h"
 #include "signalrclient/signalr_exception.h"
@@ -10,7 +11,7 @@ namespace signalr
 {
     namespace handshake
     {
-        std::string write_handshake(hub_protocol* protocol)
+        std::string write_handshake(const std::unique_ptr<hub_protocol>& protocol)
         {
             auto map = std::map<std::string, signalr::value>
             {
@@ -18,16 +19,7 @@ namespace signalr
                 { "version", signalr::value((double)protocol->version()) }
             };
 
-            ArduinoJson::StaticJsonDocument<60> doc;
-            JsonArray array = doc.to<JsonArray>();
-
-            createJson(signalr::value(std::move(map)), array);
-
-            std::string serialized;
-
-            serializeJson(array, serialized);
-
-            return serialized + record_separator;
+            return Json::writeString(getJsonWriter(), createJson(signalr::value(std::move(map)))) + record_separator;
         }
 
         std::tuple<std::string, signalr::value> parse_handshake(const std::string& response)
@@ -39,14 +31,16 @@ namespace signalr
             }
             auto message = response.substr(0, pos);
 
-            ArduinoJson::StaticJsonDocument<400> doc;
+            Json::Value root;
+            auto reader = getJsonReader();
+            std::string errors;
 
-            if (ArduinoJson::deserializeJson(doc, message.c_str(), message.size()) != DeserializationError::Code::Ok)
+            if (!reader->parse(message.c_str(), message.c_str() + message.size(), &root, &errors))
             {
-                throw signalr_exception("deserialization error");
+                throw signalr_exception(errors);
             }
             auto remaining_data = response.substr(pos + 1);
-            return std::forward_as_tuple(remaining_data, createValue(doc));
+            return std::forward_as_tuple(remaining_data, createValue(root));
         }
     }
 }
