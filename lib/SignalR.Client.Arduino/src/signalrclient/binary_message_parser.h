@@ -6,10 +6,7 @@
 
 #ifdef USE_MSGPACK
 
-#ifndef __SIZE_TYPE__
-#define __SIZE_TYPE__ long unsigned int
-typedef __SIZE_TYPE__ size_t;
-#endif
+#include <stddef.h>
 
 namespace signalr
 {
